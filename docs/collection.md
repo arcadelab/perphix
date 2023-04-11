@@ -3,18 +3,21 @@
 This document describes the process of collecting and de-identifying pre-operative CT images and
 X-ray image sequences from Johns Hopkins Hospital. Since the collection and de-identification
 process depends on the source from which the data are being obtained, details for each are provided.
-During the course of collection, the physician (Dr. Greg Osgood) will carry out these procedures,
-accessing PHI in order to obtain corresponding X-ray and CT image data, but no patient identifiers
-will be preserved in the final dataset. The de-identification process described for each collection
-method below will ensure that no patient identifers are preserved.
+During the course of collection, the physician carries out these procedures, accessing PHI in order
+to obtain corresponding X-ray and CT image data, but no patient identifiers are preserved in the
+final dataset. The de-identification process described for each collection method below ensures that
+no patient identifers are preserved.
 
-In all cases, the collected data will be transferred to a OneDrive sharepoint via a lab-owned PC laptop.
+In all cases, the collected data will be transferred to a OneDrive sharepoint at the time of
+collection via a lab-owned PC laptop, and any intermediate storage devices will be erased
+immediately after transfer.
 
 ## Creating a New Patient Folder
 
-In all cases, a new patient folder must be created. This folder name contains a randomly generated
-6-digit number that is used internally as the case number. The internal case number is not derived
-in any way from patient identifiers. To add a new patient folder, do the following:
+In all cases, a new patient folder must be created on the Sharepoint. This folder name contains a
+randomly generated 6-digit number that is used internally as the case number. The internal case
+number is not derived in any way from patient identifiers. To add a new patient folder, do the
+following:
 
 1. On the lab laptop, go to [numbergenerator.org](https://numbergenerator.org) and generate a
    6-digit number, `XXXXXX`. (If the number is already in use, regenerate.)
@@ -50,14 +53,18 @@ starting at `00`. If multiple procedures have been collected, increment the proc
 
 ### PACS Export
 
-Sometimes, the Cios may not be accessible (because it is being used). In these cases, X-ray data can be obtained directly from PACS and de-identified using the PACS software.
+Sometimes, the Cios may not be accessible (because it is being used). In these cases, X-ray data can
+be obtained and de-identified directly from the PACS system:
 
-1. On the PACS viewer, identify the procedure in question, often described as "Fluoro No Charge."
-2. Select the "Export" button.
-3. Select "DICOM" as the export format.
-4. Select "De-identify" as the export type.
-5. Select "Export" to begin the export process. The export process may take several minutes. You can
-monitor the progress by following the same steps and selecting "See Status."
+1. On the hospital PACS viewer, identify the procedure in question, often described as "Fluoro No Charge."
+2. Select the "Save" button.
+3. Select "DICOM" as the export format. This will save the data as a ZIP folder containing the data
+   and a PACS viewer as an EXE file.
+4. Once the export has finished, navigate to the folder where the data was saved. Use the "Move To"
+   button to move the zip to the USB drive.
+5. Using the lab laptop, unzip the saved data on the USB drive. The zip 
+
+
 
 TODO: update the above based on using the PACS export on the lab laptop.
 
