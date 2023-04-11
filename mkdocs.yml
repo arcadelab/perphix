@@ -1,0 +1,11 @@
+site_name: Perphix
+site_url: https://example.com/
+nav:
+  - Home: index.md
+  - Data: data.md
+  - Collection: collection.md
+  - Annotation: annotation.md
+  - About: about.md
+
+theme:
+  name: readthedocs

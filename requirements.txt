@@ -1,0 +1,13 @@
+# TODO remove unused packages
+numpy
+rich
+pycocotools
+
+# development
+pre-commit
+black
+flake8
+pytest
+reorder-python-imports
+toml
+mkdocs
