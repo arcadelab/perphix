@@ -1,12 +1,12 @@
 # Data Collection
 
 This document describes the process of collecting and de-identifying pre-operative CT images and
-X-ray image sequences from Johns Hopkins Hospital. Since the collection and de-identification
-process depends on the source from which the data are being obtained, details for each are provided.
-During the course of collection, the physician carries out these procedures, accessing PHI in order
-to obtain corresponding X-ray and CT image data, but no patient identifiers are preserved in the
-final dataset. The de-identification process described for each collection method below ensures that
-no patient identifers are preserved.
+X-ray image sequences. Since the collection and de-identification process depends on the source from
+which the data are being obtained, details for each are provided. During the course of collection,
+the physician carries out these procedures. Although the physician identifies patient records to
+obtain corresponding images, no patient identifiers are preserved in the preserved records. The
+de-identification process described for each collection method below ensures that no patient
+identifers are preserved.
 
 In all cases, the collected data will be transferred to a OneDrive sharepoint at the time of
 collection via a lab-owned PC laptop, and any intermediate storage devices will be erased
@@ -28,6 +28,11 @@ Now follow the instructions for the specific collection method below.
 
 ## X-ray Images
 
+In all cases, using the lab laptop, access the online sharepoint and in the case folder
+`perphix-case-XXXXXX` created above, create a new folder named `procedure-YY`, where `YY` is the
+procedure number starting at `00`. If multiple procedures have been collected, increment the
+procedure number.
+
 ### USB Export from Siemens Cios Mobile C-arm
 
 ![Cios](img/siemens-cios.png)
@@ -43,18 +48,17 @@ pane and ensure the following:
 4. Click "Export." Do not immediately remove the USB drive! The export process may take several
 minutes. You can monitor the progress by following the same steps and selecting "See Status."
 5. Once the export is complete, remove the USB drive.
-6. Using the lab laptop, access the online sharepoint and in the case folder `perphix-case-XXXXXX`
-created above, create a new folder named `procedure-YY`, where `YY` is the procedure number
-starting at `00`. If multiple procedures have been collected, increment the procedure number.
-7. Upload the de-identified export data from the USB drive to the new procedure folder created above.
-8. Double check the data has been uploaded correctly.
-9. Delete the patient data on the USB drive by re-formatting the drive. Be sure to perform a
+6. Upload the de-identified export data from the USB drive to the new procedure folder `procedure-YY` created above.
+7. Double check the data has been uploaded correctly.
+8. Delete the patient data on the USB drive by re-formatting the drive. Be sure to perform a
 "complete format" to ensure that the data is completely erased.
 
 ### PACS Export
 
 Sometimes, the Cios may not be accessible (because it is being used). In these cases, X-ray data can
-be obtained and de-identified directly from the PACS system:
+be obtained and de-identified directly from the PACS system. If the PACS system enables
+de-identification at export time, this is the preferred method. Otherwise, the data must be
+de-identified after the fact (but before uploading to the sharepoint).
 
 1. On the hospital PACS viewer, identify the procedure in question, often described as "Fluoro No Charge."
 2. Select the "Save" button.
@@ -62,10 +66,59 @@ be obtained and de-identified directly from the PACS system:
    and a PACS viewer as an EXE file.
 4. Once the export has finished, navigate to the folder where the data was saved. Use the "Move To"
    button to move the zip to the USB drive.
-5. Using the lab laptop, unzip the saved data on the USB drive. The zip 
+5. Using the lab laptop, unzip the saved data on the USB drive. The unzipped data will contain a
+   folder `exam/ZZZZZZZZ` where `ZZZZZZZZ` is a random alphanumeric code. This folder contains the
+   DICOM images.
+6. Create a temporary folder on the USB drive and run
 
+   ```
+   python -m perphix deidentify -i /PATH/TO/exam/ZZZZZZZZ -o /PATH/TO/tmp --case XXXXXX
+   ```
 
-
-TODO: update the above based on using the PACS export on the lab laptop.
+   The `deidentify` command will de-identify the data and save the de-identified data to the new
+   procedure folder created above. It removes patient identifiers from the DICOM headers,
+   including `PatientName`, `PatientID`, `PatientBirthDate`, `PatientAddress`, `MilitaryRank`, and `EthnicGroup`.
+   `PatientID` is replaced with the case number `XXXXXX`, and `PatientName` is replaced with
+   `Anonymous`. This is done using the `pydicom` library by manually editing the DICOM headers.
+7. Upload the de-identified data to the new procedure folder `procedure-YY` created above.
+8. Double check the data has been uploaded correctly.
+9. Delete the patient data on the USB drive by re-formatting the drive. Be sure to perform a
+   "complete format" to ensure that the data is completely erased.
 
 ## CT Images
+
+CT images may obtained directly from PACS. If the PACS system enables de-identification at export
+time, this is the preferred method. Otherwise, the data must be de-identified after the fact (but
+before uploading to the sharepoint). The process is similar to the X-ray images above, but the
+`dcm2niix` tool is used to convert the DICOM images to NIfTI format, which does not preserve patient
+identifiers by nature of the format.
+
+1. On the hospital PACS viewer, with the same patient as above, identify the CT scan in question.
+   This must be a high-resolution CT scan of the lower torso. If the head is visible in the CT scan,
+   it will be cropped in a later step.
+2. Select the "Save" button.
+3. Select "DICOM" as the export format. This will save the data as a ZIP folder containing the data
+   and a PACS viewer as an EXE file.
+4. Once the export has finished, navigate to the folder where the data was saved. Use the "Move To"
+   button to move the zip to the USB drive.
+5. Using the lab laptop, unzip the saved data on the USB drive. Identify the folder containing the DICOM
+   images.
+6. Create a temporary folder on the USB drive and run
+
+   ```
+   dcm2niix -z y -o /PATH/TO/tmp /PATH/TO/DICOM/FOLDER
+   ```
+
+   This will result in two files, a `.nii.gz` file and a `.json` file. The `.nii.gz` file contains
+   the image data, and the `.json` file contains the metadata. The metadata contains the patient
+   identifiers, but the image data does not. Delete the `.json` file.
+7. If the CT scan contains the head, crop the image to remove the head. This can be done using
+   3D Slicer. Open the `.nii.gz` file in 3D Slicer, and use the "Crop Volume" module to crop the
+   image. Save the cropped image as a new `.nii.gz` file in the temporary folder.
+8. On the sharepoint, create a new folder under `perphix-case-XXXXXX` named `ct-YY`, where `YY` is
+   the CT scan number starting at `00`. If multiple CT scans have been collected, increment the
+   number.
+9. Upload the `.nii.gz` file to the new CT folder `ct-YY` created above.
+10. Double check the data has been uploaded correctly.
+11. Delete the patient data on the USB drive by re-formatting the drive. Be sure to perform a
+    "complete format" to ensure that the data is completely erased.
