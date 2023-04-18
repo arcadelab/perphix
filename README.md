@@ -20,6 +20,14 @@ documentation for the Perphix datasets. It is provided separately for ease of in
 pip install perphix
 ```
 
+or from source:
+
+```bash
+git clone git@github.com:arcadelab/perphix.git
+cd perphix
+pip install -e .
+```
+
 ## Documentation
 
 The documentation for this project is hosted on [Read the Docs](https://perphix.readthedocs.io/en/latest/).
