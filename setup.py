@@ -13,10 +13,9 @@ setup(
     url="https://github.com/arcadelab/perphix",
     install_requires=[
         "click",
-        "omegaconf",
         "rich",
         "numpy",
-        "deepdrr",
+        "pycocotools",
     ],
     packages=find_packages(),
 )

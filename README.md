@@ -8,10 +8,11 @@
 <https://perphix.readthedocs.io/en/latest/?badge=latest>)
 
 Utilities and documentation for the collection, annotation, and usage of X-ray image sequences for
-surgical phase recognition.
+surgical phase recognition, with a focus on percutaneous fracture fixation.
 
-This repository is used by [pelphix](https://github.com/benjamindkilleen/pelphix) to provide
-data-related utilities and documentation.
+This repository is used by [Pelphix](https://github.com/benjamindkilleen/pelphix) to provide
+data-related utilities and documentation. It classes for loading and processing data, as well as
+documentation for the Perphix datasets. It is provided separately for ease of installation.
 
 ## Installation
 

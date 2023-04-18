@@ -2,6 +2,8 @@
 numpy
 rich
 pycocotools
+opencv-python
+albumentations
 
 # development
 pre-commit
@@ -10,4 +12,7 @@ flake8
 pytest
 reorder-python-imports
 toml
+
+# Docs
 mkdocs
+pymdown-extensions
