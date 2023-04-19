@@ -239,7 +239,7 @@ class PerphixSequenceDataset(PerphixContainer):
                 seq_images[s, :, :, 0] = prev_prev_image
                 seq_images[s, :, :, 1] = prev_image
 
-        # Cast to tensors
+        # Cast to tensors. Maybe not necessary.
         images = torch.tensor(seq_images).permute(0, 3, 1, 2).float()
         masks = torch.tensor(seq_masks).float()
         heatmaps = torch.tensor(seq_heatmaps).float()

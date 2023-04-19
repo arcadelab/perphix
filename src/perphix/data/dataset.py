@@ -923,6 +923,21 @@ class PerphixContainer(PerphixBase):
         image_info = dataset.images[image_idx_in_dataset]
         return image_info, dataset, image_idx_in_dataset
 
+    def get_image_vis(self, image_idx: int) -> np.ndarray:
+        """Get a visualisation of the image corresponding to the given image index.
+
+        Tile the image in a 2x2 grid, with the original in the upper left.
+        Keypoints are shown in the upper right.
+        Anatomy/tool masks are shown in the lower left.
+        Corridor masks are shown in the lower right.
+        Underneath the images, include text for the phase. Gray out the ones that are not active?
+
+        Args:
+            image_idx (int): The image index.
+
+        Returns:
+            image_vis: (H, W, 3) uint8 image with annotations shown."""
+
     def get_procedure(self, procedure_idx: int) -> tuple[list[dict[str, Any]], np.ndarray]:
         """Get the procedure corresponding to the given procedure index.
 
