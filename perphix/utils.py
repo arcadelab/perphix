@@ -1,8 +1,10 @@
+from typing import Optional, Any
 from pathlib import Path
 import pydicom
 from pydicom.errors import InvalidDicomError
 from typing import Generator
 import numpy as np
+import json
 
 
 def get_dicom_paths(input_dir: Path) -> Generator[Path, None, None]:
@@ -46,3 +48,38 @@ def heatmap(x: float, y: float, scale: float, size: tuple[int, int]) -> np.ndarr
     distance_squared = np.square(xdiff) + np.square(ydiff)
     h = np.exp(-distance_squared / (2 * scale * scale))
     return h.astype(np.float32)
+
+
+def jsonable(obj: Any):
+    """Convert obj to a JSON-ready container or object.
+    Args:
+        obj ([type]):
+    """
+    if obj is None:
+        return "null"
+    elif isinstance(obj, (str, float, int, complex)):
+        return obj
+    elif isinstance(obj, Path):
+        return str(obj.resolve())
+    elif isinstance(obj, (list, tuple)):
+        return type(obj)(map(jsonable, obj))
+    elif isinstance(obj, dict):
+        return dict(jsonable(list(obj.items())))
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif hasattr(obj, "__array__"):
+        return np.array(obj).tolist()
+    else:
+        raise ValueError(f"Unknown type for JSON: {type(obj)}")
+
+
+def save_json(path: str, obj: Any):
+    obj = jsonable(obj)
+    with open(path, "w") as file:
+        json.dump(obj, file, indent=4, sort_keys=True)
+
+
+def load_json(path: str) -> Any:
+    with open(path, "r") as file:
+        out = json.load(file)
+    return out

@@ -16,6 +16,8 @@ setup(
         "rich",
         "numpy",
         "pycocotools",
+        "albumentations",
+        "opencv-python",
     ],
     packages=find_packages(),
 )

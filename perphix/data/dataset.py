@@ -22,18 +22,17 @@ from PIL import Image
 
 import logging
 import numpy as np
-from deepdrr.utils.data_utils import load_json, save_json
 from rich.progress import track
 import csv
 import json
 import pandas as pd
 from collections import Counter
-from deepdrr.utils import listify
 from functools import reduce
 import operator
 
 
 from .base import PerphixBase
+from ..utils import load_json, save_json
 
 log = logging.getLogger(__name__)
 
@@ -949,7 +948,9 @@ class PerphixContainer(PerphixBase):
         image_info, _, _ = self.get_image_info(image_idx)
         return image_info
 
-    def get_image_full(self, image_idx: int) -> tuple[dict[str, Any], list[dict], PerphixDataset, int]:
+    def get_image_full(
+        self, image_idx: int
+    ) -> tuple[dict[str, Any], list[dict], PerphixDataset, int]:
         """Get the image corresponding to the given image index.
 
         Args:
