@@ -24,6 +24,8 @@ def draw_keypoints(
     keypoints: np.ndarray,
     names: Optional[List[str]] = None,
     colors: Optional[np.ndarray] = None,
+    palette: str = "hls",
+    seed: Optional[int] = None,
 ) -> np.ndarray:
     """Draw keypoints on an image.
 
@@ -36,39 +38,34 @@ def draw_keypoints(
 
     """
 
-
-def draw_circles(
-    image: np.ndarray,
-    circles: np.ndarray,
-    color: List[int] = [255, 0, 0],
-    thickness: int = 2,
-    radius: Optional[int] = None,
-) -> np.ndarray:
-    """Draw circles on an image.
-
-    Args:
-        image (np.ndarray): the image to draw on.
-        circles (np.ndarray): the circles to draw. [N, 3] array of [x, y, r] coordinates.
-
-    """
-    color = np.array(color)
-    if np.any(color < 1):
-        color = color * 255
-    color = color.astype(int)[:3].tolist()
-
-    circles = np.array(circles)
     image = ensure_cdim(as_uint8(image)).copy()
-    for circle in circles:
-        if circles.shape[1] == 3:
-            x, y, r = circle
-        elif circles.shape[1] == 2:
-            x, y = circle
-            r = radius if radius is not None else 15
-        else:
-            raise ValueError(f"bad circles shape: {circles.shape}")
-        if radius is not None:
-            r = radius
-        image = cv2.circle(image, (int(x), int(y)), int(r), color, thickness)
+    keypoints = np.array(keypoints)
+    if colors is None:
+        colors = np.array(sns.color_palette(palette, keypoints.shape[0]))
+        if seed is not None:
+            np.random.seed(seed)
+        colors = colors[np.random.permutation(colors.shape[0])]
+
+    if np.any(colors < 1):
+        colors = (colors * 255).astype(int)
+
+    for i, keypoint in enumerate(keypoints):
+        if np.any(keypoint < 0):
+            continue
+        color = colors[i].tolist()
+        x, y = keypoint
+        image = cv2.circle(image, (int(x), int(y)), 5, color, -1)
+        if names is not None:
+            image = cv2.putText(
+                image,
+                names[i],
+                (int(x) + 5, int(y) - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                color,
+                1,
+                cv2.LINE_AA,
+            )
     return image
 
 
@@ -79,6 +76,8 @@ def draw_masks(
     threshold: float = 0.5,
     names: Optional[List[str]] = None,
     colors: Optional[np.ndarray] = None,
+    palette: str = "hls",
+    seed: Optional[int] = None,
 ) -> np.ndarray:
     """Draw contours of masks on an image.
 
@@ -88,11 +87,12 @@ def draw_masks(
     """
 
     image = as_float32(image)
-    masks = masks.transpose(2, 0, 1)
-    colors = np.array(sns.color_palette(palette, masks.shape[0]))
-    if seed is not None:
-        np.random.seed(seed)
-    colors = colors[np.random.permutation(colors.shape[0])]
+    if colors is None:
+        colors = np.array(sns.color_palette(palette, masks.shape[0]))
+        if seed is not None:
+            np.random.seed(seed)
+        colors = colors[np.random.permutation(colors.shape[0])]
+
     image *= 1 - alpha
     for i, mask in enumerate(masks):
         bool_mask = mask > threshold
@@ -104,4 +104,24 @@ def draw_masks(
         image = as_float32(
             cv2.drawContours(as_uint8(image), contours, -1, (255 * colors[i]).tolist(), 1)
         )
-    return (image * 255).astype(np.uint8)
+
+    image = as_uint8(image)
+
+    if names is not None:
+        for i, mask in enumerate(masks):
+            bool_mask = mask > threshold
+            ys, xs = np.argwhere(bool_mask).T
+            y = (np.min(ys) + np.max(ys)) / 2
+            x = (np.min(xs) + np.max(xs)) / 2
+            image = cv2.putText(
+                image,
+                names[i],
+                (int(x) + 5, int(y) - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255 * colors[i]).tolist(),
+                1,
+                cv2.LINE_AA,
+            )
+
+    return image

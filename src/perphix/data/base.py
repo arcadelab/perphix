@@ -65,17 +65,17 @@ class PerphixBase:
     # For instance segmentation/detection, there are X supercategories of object: instrument, patient, corridor
     categories = [
         {
-            "supercategory": "instrument",
+            "supercategory": "instrument",  # 0
             "id": 1,
             "name": "wire",
         },
         {
-            "supercategory": "instrument",
+            "supercategory": "instrument",  # 1
             "id": 2,
             "name": "screw",
         },
         {
-            "supercategory": "patient",
+            "supercategory": "patient",  # 2
             "id": 3,
             "name": "hip_left",
             "keypoints": [
@@ -100,7 +100,7 @@ class PerphixBase:
             ],
         },
         {
-            "supercategory": "patient",
+            "supercategory": "patient",  # 3
             "id": 4,
             "name": "hip_right",
             "keypoints": [
@@ -125,12 +125,12 @@ class PerphixBase:
             ],
         },
         {
-            "supercategory": "patient",
+            "supercategory": "patient",  # 4
             "id": 5,
             "name": "femur_left",
         },
         {
-            "supercategory": "patient",
+            "supercategory": "patient",  # 5
             "id": 6,
             "name": "femur_right",
         },
@@ -145,7 +145,7 @@ class PerphixBase:
             "name": "vertebrae_L5",
         },
         {
-            "supercategory": "patient",  # DEPRECATED, use hip_left, hip_right
+            "supercategory": "patient",
             "id": 9,
             "name": "pelvis",
             "keypoints": [
@@ -267,7 +267,7 @@ class PerphixBase:
     def get_annotation_pretty_name(cls, catid: int) -> str:
         return cls._annotation_pretty_names[cls.get_annotation_name(catid)]
 
-    keypoint_names: list[str] = get_annotation_category("pelvis")["keypoints"]
+    keypoint_names: list[str] = _annotation_from_id[9]["keypoints"]
     _keypoint_names: dict[str, int] = dict((kname, i) for i, kname in enumerate(keypoint_names))
     _keypoint_labels: dict[int, str] = dict((i, kname) for i, kname in enumerate(keypoint_names))
     keypoint_pretty_names = [kname.replace("_", " ").upper() for kname in keypoint_names]

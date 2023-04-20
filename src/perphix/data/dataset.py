@@ -20,6 +20,8 @@ import sys
 from PIL import Image
 import cv2
 import seaborn as sns
+from deepdrr.utils import image_utils
+from hydra.utils import get_original_cwd
 
 import logging
 import numpy as np
@@ -129,7 +131,7 @@ class PerphixDataset(PerphixBase):
         annotation: dict[str, Any],
         image_dir: Path,
         name: Optional[str] = None,
-        palette: str = "Spectral",
+        palette: str = "hls",  # "Spectral"
     ):
         """The dataset.
 
@@ -150,11 +152,22 @@ class PerphixDataset(PerphixBase):
         self.process_sequence_categories()
         self.process_sequences()
 
-        self.keypoint_colors = sns.color_palette(palette, self.num_keypoints)
-        num_corridors = len(self.super_categories["corridor"])
-        num_categories = len(self.categories)
-        self.segmentation_colors = sns.color_palette(palette, num_categories - num_corridors)
-        self.corridor_colors = sns.color_palette(palette, num_corridors)
+        self.keypoint_colors = np.array(sns.color_palette(palette, self.num_keypoints))
+        self.keypoint_colors = self.keypoint_colors[
+            np.random.permutation(len(self.keypoint_colors))
+        ]
+
+        segmentation_colors = np.array(sns.color_palette(palette, len(self.categories)))
+        segmentation_colors = segmentation_colors[np.random.permutation(len(segmentation_colors))]
+        self.segmentation_colors = dict()
+        for i, cat in enumerate(self.categories.values()):
+            self.segmentation_colors[cat["id"]] = segmentation_colors[i]
+
+        sequence_colors = np.array(sns.color_palette(palette, len(self.seq_categories)))
+        sequence_colors = sequence_colors[np.random.permutation(len(sequence_colors))]
+        self.sequence_colors = dict()
+        for i, cat in enumerate(self.seq_categories):
+            self.sequence_colors[cat["id"]] = sequence_colors[i]
 
         # TODO: check if sequence IDs consist of consecutive labels starting at 1, and if they do not, create a mapping
         # The 0 label is reserved for "no sequence" of that type.
@@ -230,7 +243,7 @@ class PerphixDataset(PerphixBase):
         """
         return len(self.images)
 
-    def get_procedure_ids(self, procedure_idx: int) -> list[int]:
+    def get_procedure_image_ids(self, procedure_idx: int) -> list[int]:
         """Get the image ids for a given procedure index.
 
         Args:
@@ -850,16 +863,23 @@ class PerphixDataset(PerphixBase):
             image, keypoints, names=self.keypoint_pretty_names, colors=self.keypoint_colors
         )
 
-        corridor_category_ids, corridor_masks = [], []
-        anatomy_category_ids, anatomy_masks = [], []
+        corridor_category_ids, corridor_masks, corridor_colors = [], [], []
+        anatomy_category_ids, anatomy_masks, anatomy_colors = [], [], []
         for category_id, mask in zip(category_ids, masks):
-            if category_id in self.super_categories["corridor"]:
+            if category_id in [9]:
+                # Skip pelvis
+                continue
+            elif category_id in self.super_categories["corridor"]:
                 corridor_category_ids.append(category_id)
                 corridor_masks.append(mask)
+                corridor_colors.append(self.segmentation_colors[category_id])
             else:
                 anatomy_category_ids.append(category_id)
                 anatomy_masks.append(mask)
+                anatomy_colors.append(self.segmentation_colors[category_id])
 
+        corridor_masks = np.array(corridor_masks)
+        anatomy_masks = np.array(anatomy_masks)
         corridor_names = [self.get_annotation_pretty_name(catid) for catid in corridor_category_ids]
         anatomy_names = [self.get_annotation_pretty_name(catid) for catid in anatomy_category_ids]
 
@@ -867,15 +887,20 @@ class PerphixDataset(PerphixBase):
             image,
             corridor_masks,
             names=corridor_names,
-            colors=self.corridor_colors,
+            colors=corridor_colors,
         )
 
         anatomy_vis = vis_utils.draw_masks(
             image,
             anatomy_masks,
             names=anatomy_names,
-            colors=self.segmentation_colors,
+            colors=anatomy_colors,
         )
+
+        # log.debug(f"Image: {image.shape}, {image.dtype}")
+        # log.debug(f"Keypoints: {keypoints_vis.shape}, {keypoints_vis.dtype}")
+        # log.debug(f"Corridor: {corridor_vis.shape}, {corridor_vis.dtype}")
+        # log.debug(f"Anatomy: {anatomy_vis.shape}, {anatomy_vis.dtype}")
 
         image_vis = np.concatenate(
             [
@@ -885,9 +910,112 @@ class PerphixDataset(PerphixBase):
             axis=0,
         )
 
+        sequences = self.sequences[image_id]
+        seq_names = self.get_sequence_names(sequences)
+        side_panel = 0 * np.ones_like(image_vis)
+
+        h, w = image_vis.shape[:2]
+        step = h // 8
+        scale = 4
+        sep = w // 2
+        offset = step // 2
+        text_color = (255, 255, 255)
+        side_panel = cv2.putText(
+            side_panel,
+            f"Corridor:",
+            (offset, step * 1 - step // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            text_color,
+            scale,
+            cv2.LINE_AA,
+        )
+        side_panel = cv2.putText(
+            side_panel,
+            seq_names["task"].capitalize().replace("_", " "),
+            (sep, step * 1 - step // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (self.sequence_colors[sequences["task"]] * 255).tolist(),
+            scale,
+            cv2.LINE_AA,
+        )
+        side_panel = cv2.putText(
+            side_panel,
+            f"Activity:",
+            (offset, step * 2 - step // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            text_color,
+            scale,
+            cv2.LINE_AA,
+        )
+        side_panel = cv2.putText(
+            side_panel,
+            seq_names["activity"].capitalize().replace("_", " "),
+            (sep, step * 2 - step // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (self.sequence_colors[sequences["activity"]] * 255).tolist(),
+            scale,
+            cv2.LINE_AA,
+        )
+        side_panel = cv2.putText(
+            side_panel,
+            f"View:",
+            (offset, step * 3 - step // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            text_color,
+            scale,
+            cv2.LINE_AA,
+        )
+        side_panel = cv2.putText(
+            side_panel,
+            seq_names["acquisition"].capitalize().replace("_", " "),
+            (sep, step * 3 - step // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (self.sequence_colors[sequences["acquisition"]] * 255).tolist(),
+            scale,
+            cv2.LINE_AA,
+        )
+        side_panel = cv2.putText(
+            side_panel,
+            f"Frame:",
+            (offset, step * 4 - step // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            text_color,
+            scale,
+            cv2.LINE_AA,
+        )
+        side_panel = cv2.putText(
+            side_panel,
+            seq_names["frame"].capitalize().replace("_", " "),
+            (sep, step * 4 - step // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (self.sequence_colors[sequences["frame"]] * 255).tolist(),
+            scale,
+            cv2.LINE_AA,
+        )
+
+        image_dir = Path(get_original_cwd()) / "images"
+        logo = cv2.imread(str(image_dir / "arcade_logo_black.png"))
+        logo = cv2.cvtColor(logo, cv2.COLOR_BGR2RGB)
+        lh, lw = logo.shape[:2]
+        new_width = w - offset * 2
+        new_height = int(new_width * lh / lw)
+        logo = cv2.resize(logo, (new_width, new_height))
+
+        side_panel[
+            h // 2 + 2 * offset : h // 2 + 2 * offset + new_height, offset : offset + new_width
+        ] = logo
+
         # TODO: add text for the phase along the bottom.
 
-        return image_vis
+        return np.concatenate([image_vis, side_panel], axis=1)
 
     def visualize_procedure(self, procedure_idx: int) -> np.ndarray:
         """Get the visualizations for every image in the procedure.
@@ -899,9 +1027,17 @@ class PerphixDataset(PerphixBase):
             image_vis: (S, H, W, 3) uint8 images with annotations shown.
 
         """
-        image_ids = self.get_procedure_ids(procedure_idx)
-        procedure_vis = np.array([self.visualize_image(image_id) for image_id in image_ids])
-        return procedure_vis
+        image_ids = self.get_procedure_image_ids(procedure_idx)
+        frames = []
+        for i, image_id in enumerate(image_ids):
+            log.debug(f"Visualizing image {i} / {len(image_ids)}")
+            frames.append(self.visualize_image(image_id))
+
+            if i == 0:
+                image_utils.save(f"vis_{i}.png", frames[-1])
+
+        frames = np.stack(frames, axis=0)
+        return frames
 
 
 class PerphixContainer(PerphixBase):
@@ -987,7 +1123,7 @@ class PerphixContainer(PerphixBase):
         image_id = self.datasets[dataset_idx].image_ids[image_idx_in_dataset]
         return image_id
 
-    def get_procedure_ids(self, procedure_idx) -> list[int]:
+    def get_procedure_image_ids(self, procedure_idx) -> list[int]:
         """Get the image indices (in the container) for the given procedure index."""
         dataset_idx: int = int(min(np.argwhere(procedure_idx < self.cumulative_num_procedures)))
         # log.debug(f"Getting procedure {procedure_idx} from dataset {dataset_idx}.")
@@ -998,7 +1134,7 @@ class PerphixContainer(PerphixBase):
             procedure_idx_in_dataset = (
                 procedure_idx - self.cumulative_num_procedures[dataset_idx - 1]
             )
-        image_ids = dataset.get_procedure_ids(procedure_idx_in_dataset)
+        image_ids = dataset.get_procedure_image_ids(procedure_idx_in_dataset)
         return image_ids
 
     def get_procedure_info(
@@ -1207,6 +1343,36 @@ class PerphixContainer(PerphixBase):
                 counts[sequence_super_category] += sequence_counts
 
         return counts
+
+    def visualize_image(self, image_idx: int, scale: float = 1.0) -> np.ndarray:
+        """Get a visualisation of the image corresponding to the given image index.
+
+        Args:
+            image_idx (int): Image id in the dataset.
+            scale (float): The scale to use for the images.
+
+        Returns:
+            image_vis: (H, W, 3) uint8 image with annotations shown.
+
+        """
+        dataset = self.get_dataset_from_image_idx(image_idx)
+        image_id = self.get_image_id(image_idx)
+        return dataset.visualize_image(image_id, scale=scale)
+
+    def visualize_procedure(self, procedure_idx: int) -> np.ndarray:
+        """Get the visualizations for every image in the procedure.
+
+        Args:
+            procedure_idx (int): The procedure index.
+
+        Returns:
+            image_vis: (S, H, W, 3) uint8 images with annotations shown.
+
+        """
+        dataset = self.get_dataset(procedure_idx)
+        procedure_idx_in_dataset = self.get_procedure_idx_in_dataset(procedure_idx)
+        log.debug(f"Visualizing procedure {procedure_idx} in dataset {dataset.name}")
+        return dataset.visualize_procedure(procedure_idx_in_dataset)
 
     @property
     def num_procedures(self):
