@@ -11,7 +11,6 @@ existing datasets for analysis or visualization. They may be subclassed to creat
 with __getitem__ and __len__ methods for training or inference, depending on the goal.
 
 """
-
 from __future__ import annotations
 import time
 from typing import Any, Optional, Union, TypeVar
@@ -19,6 +18,8 @@ from datetime import datetime
 from pathlib import Path
 import sys
 from PIL import Image
+import cv2
+import seaborn as sns
 
 import logging
 import numpy as np
@@ -32,7 +33,7 @@ import operator
 
 
 from .base import PerphixBase
-from ..utils import load_json, save_json
+from ..utils import load_json, save_json, vis_utils
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +124,13 @@ class PerphixDataset(PerphixBase):
 
     """
 
-    def __init__(self, annotation: dict[str, Any], image_dir: Path, name: Optional[str] = None):
+    def __init__(
+        self,
+        annotation: dict[str, Any],
+        image_dir: Path,
+        name: Optional[str] = None,
+        palette: str = "Spectral",
+    ):
         """The dataset.
 
         Args:
@@ -142,6 +149,12 @@ class PerphixDataset(PerphixBase):
         self.process_segmentations()
         self.process_sequence_categories()
         self.process_sequences()
+
+        self.keypoint_colors = sns.color_palette(palette, self.num_keypoints)
+        num_corridors = len(self.super_categories["corridor"])
+        num_categories = len(self.categories)
+        self.segmentation_colors = sns.color_palette(palette, num_categories - num_corridors)
+        self.corridor_colors = sns.color_palette(palette, num_corridors)
 
         # TODO: check if sequence IDs consist of consecutive labels starting at 1, and if they do not, create a mapping
         # The 0 label is reserved for "no sequence" of that type.
@@ -216,6 +229,18 @@ class PerphixDataset(PerphixBase):
 
         """
         return len(self.images)
+
+    def get_procedure_ids(self, procedure_idx: int) -> list[int]:
+        """Get the image ids for a given procedure index.
+
+        Args:
+            procedure_idx (int): The procedure index.
+
+        Returns:
+            list[int]: List of image ids for the procedure.
+
+        """
+        return self.procedures[self.first_frame_ids[procedure_idx]]
 
     def get_procedure(self, procedure_idx: int) -> tuple[list[dict[str, Any]], np.ndarray]:
         """Get the procedure for a given first frame id.
@@ -419,21 +444,24 @@ class PerphixDataset(PerphixBase):
                     self.keypoint_from_label[i] = keypoint
 
     def process_images(self):
+        self.image_ids: dict[int, int] = {}  # image_idx -> image_id
         self.images: dict[int, list[dict[str, Any]]] = {}  # image_id -> image
         self.procedures: dict[int, list[int]] = {}  # first_frame_id -> image_ids
         self.first_frame_ids: list[int] = []  # procedure_idx -> first_frame_id
         self.procedure_idx_from_first_frame_id: dict[
             int, int
         ] = {}  # first_frame_id -> procedure_idx
-        for image in self.annotation["images"]:
-            image_id = int(image["id"])
-            if image_id in self.images:
-                log.error("Skipping duplicate image id: {}".format(image))
-            else:
-                image["path"] = str(self.image_dir / image["file_name"])
-                self.images[image_id] = image
+        for image_idx, image_info in enumerate(self.annotation["images"]):
+            image_id = int(image_info["id"])
+            self.image_ids[image_idx] = image_id
 
-            first_frame_id = image["first_frame_id"]
+            if image_id in self.images:
+                log.error("Skipping duplicate image id: {}".format(image_info))
+            else:
+                image_info["path"] = str(self.image_dir / image_info["file_name"])
+                self.images[image_id] = image_info
+
+            first_frame_id = image_info["first_frame_id"]
             if first_frame_id not in self.procedures:
                 self.procedures[first_frame_id] = []
                 procedure_idx = len(self.first_frame_ids)
@@ -789,6 +817,92 @@ class PerphixDataset(PerphixBase):
 
         return [task, activity, acquisition, frame]
 
+    def visualize_image(
+        self,
+        image_id: int,
+        scale: float = 1.0,
+    ) -> np.ndarray:
+        """Get a visualisation of the image corresponding to the given image index.
+
+        Tile the image in a 2x2 grid, with the original in the upper left.
+        - Keypoints are shown in the upper right.
+        - Anatomy/tool masks are shown in the lower left.
+        - Corridor masks are shown in the lower right.
+        - Underneath the images, include text for the phase. Gray out the ones that are not active?
+
+        Args:
+            image_id (int): Image id in the dataset.
+            scale (float): The scale to use for the images.
+
+        Returns:
+            image_vis: (H, W, 3) uint8 image with annotations shown.
+
+        """
+        image_info = self.images[image_id]
+        annos = self.segmentations[image_id]
+        category_ids, keypoints, masks, bboxes = self.decode_annotations(image_info, annos)
+
+        image = cv2.imread(str(image_info["path"]))
+
+        # TODO: scale the image and annotations
+
+        keypoints_vis = vis_utils.draw_keypoints(
+            image, keypoints, names=self.keypoint_pretty_names, colors=self.keypoint_colors
+        )
+
+        corridor_category_ids, corridor_masks = [], []
+        anatomy_category_ids, anatomy_masks = [], []
+        for category_id, mask in zip(category_ids, masks):
+            if category_id in self.super_categories["corridor"]:
+                corridor_category_ids.append(category_id)
+                corridor_masks.append(mask)
+            else:
+                anatomy_category_ids.append(category_id)
+                anatomy_masks.append(mask)
+
+        corridor_names = [self.get_annotation_pretty_name(catid) for catid in corridor_category_ids]
+        anatomy_names = [self.get_annotation_pretty_name(catid) for catid in anatomy_category_ids]
+
+        corridor_vis = vis_utils.draw_masks(
+            image,
+            corridor_masks,
+            names=corridor_names,
+            colors=self.corridor_colors,
+        )
+
+        anatomy_vis = vis_utils.draw_masks(
+            image,
+            anatomy_masks,
+            names=anatomy_names,
+            colors=self.segmentation_colors,
+        )
+
+        image_vis = np.concatenate(
+            [
+                np.concatenate([image, keypoints_vis], axis=1),
+                np.concatenate([anatomy_vis, corridor_vis], axis=1),
+            ],
+            axis=0,
+        )
+
+        # TODO: add text for the phase along the bottom.
+
+        return image_vis
+
+    def visualize_procedure(self, procedure_idx: int) -> np.ndarray:
+        """Get the visualizations for every image in the procedure.
+
+        Args:
+            procedure_idx (int): The procedure index.
+
+        Returns:
+            image_vis: (S, H, W, 3) uint8 images with annotations shown.
+
+        """
+        image_ids = self.get_procedure_ids(procedure_idx)
+        procedure_vis = np.array([self.visualize_image(image_id) for image_id in image_ids])
+        return procedure_vis
+
 
 class PerphixContainer(PerphixBase):
     """Container around multiple PelvicWorkflows datasets."""
@@ -853,8 +967,8 @@ class PerphixContainer(PerphixBase):
         dataset_idx: int = min(np.argwhere(image_idx < self.cumulative_num_images)[0])
         return self.datasets[dataset_idx]
 
-    def get_image_idx_in_dataset(self, image_idx: int) -> int:
-        """Get the image index in the dataset corresponding to the given image index.
+    def get_image_id(self, image_idx: int) -> int:
+        """Get the image_id in the dataset corresponding to the given image index.
 
         Args:
             image_idx (int): The image index.
@@ -869,7 +983,23 @@ class PerphixContainer(PerphixBase):
             image_idx_in_dataset = image_idx
         else:
             image_idx_in_dataset = image_idx - self.cumulative_num_images[dataset_idx - 1]
-        return image_idx_in_dataset
+
+        image_id = self.datasets[dataset_idx].image_ids[image_idx_in_dataset]
+        return image_id
+
+    def get_procedure_ids(self, procedure_idx) -> list[int]:
+        """Get the image indices (in the container) for the given procedure index."""
+        dataset_idx: int = int(min(np.argwhere(procedure_idx < self.cumulative_num_procedures)))
+        # log.debug(f"Getting procedure {procedure_idx} from dataset {dataset_idx}.")
+        dataset = self.datasets[dataset_idx]
+        if dataset_idx == 0:
+            procedure_idx_in_dataset = procedure_idx
+        else:
+            procedure_idx_in_dataset = (
+                procedure_idx - self.cumulative_num_procedures[dataset_idx - 1]
+            )
+        image_ids = dataset.get_procedure_ids(procedure_idx_in_dataset)
+        return image_ids
 
     def get_procedure_info(
         self, procedure_idx: int
@@ -909,34 +1039,18 @@ class PerphixContainer(PerphixBase):
         Returns:
             image_info: The image info dictionary.
             dataset_name: The name of the dataset.
-            image_idx_in_dataset: The image index in the dataset.
+            image_id: The image id in the dataset (not the image_idx).
         """
 
         dataset_idx: int = int(min(np.argwhere(image_idx < self.cumulative_num_images)))
         dataset = self.datasets[dataset_idx]
-        # Have to subtract the cumulative number of images in the previous datasets to get the index in the current
-        # dataset.
         if dataset_idx == 0:
             image_idx_in_dataset = image_idx
         else:
             image_idx_in_dataset = image_idx - self.cumulative_num_images[dataset_idx - 1]
-        image_info = dataset.images[image_idx_in_dataset]
-        return image_info, dataset, image_idx_in_dataset
-
-    def get_image_vis(self, image_idx: int) -> np.ndarray:
-        """Get a visualisation of the image corresponding to the given image index.
-
-        Tile the image in a 2x2 grid, with the original in the upper left.
-        Keypoints are shown in the upper right.
-        Anatomy/tool masks are shown in the lower left.
-        Corridor masks are shown in the lower right.
-        Underneath the images, include text for the phase. Gray out the ones that are not active?
-
-        Args:
-            image_idx (int): The image index.
-
-        Returns:
-            image_vis: (H, W, 3) uint8 image with annotations shown."""
+        image_id = dataset.image_ids[image_idx_in_dataset]
+        image_info = dataset.images[image_id]
+        return image_info, dataset, image_id
 
     def get_procedure(self, procedure_idx: int) -> tuple[list[dict[str, Any]], np.ndarray]:
         """Get the procedure corresponding to the given procedure index.
@@ -975,13 +1089,13 @@ class PerphixContainer(PerphixBase):
             image_info: The image dictionary.
             anns: The list of annotations for the image.
         """
-        image_info, dataset, image_idx_in_dataset = self.get_image_info(image_idx)
+        image_info, dataset, image_id = self.get_image_info(image_idx)
         image_id = image_info["id"]
         if image_id not in dataset.segmentations:
             anns = []
         else:
             anns = dataset.segmentations[image_id]
-        return image_info, anns, dataset, image_idx_in_dataset
+        return image_info, anns, dataset, image_id
 
     def get_procedure_full(
         self, procedure_idx: int

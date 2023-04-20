@@ -1,6 +1,9 @@
 """The Perphix dataset"""
 from typing import List, Tuple, Dict, Union, Optional, Any
 import copy
+import pycocotools.mask as mask_util
+import numpy as np
+import cv2
 import logging
 
 import datetime
@@ -224,6 +227,26 @@ class PerphixBase:
         },
     ]
 
+    _annotation_pretty_names = {
+        "wire": "wire",
+        "screw": "screw",
+        "hip_left": "L hip",
+        "hip_right": "R hip",
+        "femur_left": "L femur",
+        "femur_right": "R femur",
+        "sacrum": "sacrum",
+        "vertebrae_L5": "L5",
+        "pelvis": "pelvis",
+        "s1_left": "L S1",
+        "s1_right": "R S1",
+        "s1": "S1",
+        "s2": "S2",
+        "ramus_left": "L ramus",
+        "ramus_right": "R ramus",
+        "teardrop_left": "L teardrop",
+        "teardrop_right": "R teardrop",
+    }
+
     _annotation_ids = dict((ann["name"], ann["id"]) for ann in categories)
     _annotation_from_id = dict((ann["id"], ann) for ann in categories)
 
@@ -239,6 +262,24 @@ class PerphixBase:
     @classmethod
     def get_annotation_name(cls, catid: int) -> str:
         return cls._annotation_from_id[catid]["name"]
+
+    @classmethod
+    def get_annotation_pretty_name(cls, catid: int) -> str:
+        return cls._annotation_pretty_names[cls.get_annotation_name(catid)]
+
+    keypoint_names: list[str] = get_annotation_category("pelvis")["keypoints"]
+    _keypoint_names: dict[str, int] = dict((kname, i) for i, kname in enumerate(keypoint_names))
+    _keypoint_labels: dict[int, str] = dict((i, kname) for i, kname in enumerate(keypoint_names))
+    keypoint_pretty_names = [kname.replace("_", " ").upper() for kname in keypoint_names]
+    num_keypoints = len(_keypoint_names)
+
+    @classmethod
+    def get_keypoint_name(cls, label: int) -> str:
+        return cls._keypoint_labels[label]
+
+    @classmethod
+    def get_keypoint_pretty_name(cls, label: int) -> str:
+        return cls._keypoint_labels[label].replace("_", " ").upper()
 
     seq_categories = [
         {
@@ -447,3 +488,55 @@ class PerphixBase:
 
         annotation["sequences"] = sequences
         return annotation
+
+    @staticmethod
+    def decode_annotations(
+        image_info: dict[str, Any], annos: list[dict[str, Any]]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Decode a list of annotations.
+
+        Args:
+            annos (list[dict[str, Any]]): List of `n` annotations.
+
+        Returns:
+            category_ids: (n,) integer category IDs.
+            keypoints: (n, k, 2) float32 keypoint coordinates in (x, y) order. -1 means not visible.
+            masks: (n, h, w) bool masks.
+            bboxes: (n, 4) float32 bounding boxes in (x, y, size_x, size_y) style (COCO).
+
+        """
+        category_ids = []
+        keypoints = []
+        masks = []
+        bboxes = []
+        for anno in annos:
+            bbox = anno["bbox"]
+            if bbox[2] < 2 or bbox[3] < 2:
+                continue
+            bboxes.append(bbox)
+            category_ids.append(anno["category_id"])
+
+            if anno["category_id"] == 9:  # pelvis
+                assert "keypoints" in anno
+                keypoint_array = np.array(anno["keypoints"]).reshape(-1, 3)
+                keypoints = [(x, y) for x, y, _ in keypoint_array]
+
+            segm = anno["segmentation"]
+            if isinstance(segm, list):
+                # Convert polygon
+                mask = mask_util.decode(
+                    mask_util.frPyObjects(segm, image_info["height"], image_info["width"])
+                )
+                mask = mask[:, :, 0]
+            elif isinstance(segm, dict):
+                # RLE
+                mask = mask_util.decode(segm)
+            else:
+                raise ValueError(
+                    "Cannot transform segmentation of type '{}'!"
+                    "Supported types are: polygons as list[list[float] or ndarray],"
+                    " COCO-style RLE as a dict.".format(type(segm))
+                )
+            masks.append(mask)
+
+        return np.array(category_ids), np.array(keypoints), np.array(masks), np.array(bboxes)

@@ -138,42 +138,7 @@ class PerphixSequenceDataset(PerphixContainer):
         seq_keypoints = []
         for anno_dicts, image_dict in zip(annotation_dicts, image_dicts):
             image = cv2.imread(str(image_dict["path"]))
-            category_ids = []
-            keypoints = []
-            masks = []
-            bboxes = []
-            for anno in anno_dicts:
-                bbox = anno["bbox"]
-                if bbox[2] < 2 or bbox[3] < 2:
-                    # area that is <= 1 pixel in width or height is not visible in the image
-                    # log.warning("Removed an object because it is too small!")
-                    continue
-                bboxes.append(bbox)
-                category_ids.append(anno["category_id"])
-
-                if anno["category_id"] == 9:  # pelvis
-                    assert "keypoints" in anno, f"Pelvis annotation does not have keypoints! {anno}"
-                    keypoints = np.array(anno["keypoints"]).reshape(-1, 3)
-                    keypoints = [(x, y) for x, y, _ in keypoints]
-
-                segm = anno["segmentation"]
-                if isinstance(segm, list):
-                    # Convert polygon
-                    mask = mask_util.decode(
-                        mask_util.frPyObjects(segm, image_dict["height"], image_dict["width"])
-                    )
-                    mask = mask[:, :, 0]
-                elif isinstance(segm, dict):
-                    # RLE
-                    mask = mask_util.decode(segm)
-                else:
-                    raise ValueError(
-                        "Cannot transform segmentation of type '{}'!"
-                        "Supported types are: polygons as list[list[float] or ndarray],"
-                        " COCO-style RLE as a dict.".format(type(segm))
-                    )
-                masks.append(mask)
-
+            category_ids, keypoints, masks, bboxes = self.decode_annotations(image_dict, anno_dicts)
             transformed = transform(
                 image=image,
                 masks=masks,

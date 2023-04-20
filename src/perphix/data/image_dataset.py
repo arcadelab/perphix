@@ -68,43 +68,12 @@ class PerphixImageDataset(PerphixContainer):
             tuple[dict[str, Any], np.ndarray]: The image dictionary and label.
 
         """
-        image_dict, annotation_dicts, dataset, image_idx_in_dataset = self.get_image_full(index)
+        image_dict, annotation_dicts, dataset, image_id = self.get_image_full(index)
 
         image: np.ndarray = cv2.imread(str(image_dict["path"]))
-        category_ids = []
-        keypoints = []
-        masks = []
-        bboxes = []
-        for anno in annotation_dicts:
-            bbox = anno["bbox"]
-            if bbox[2] < 2 or bbox[3] < 2:
-                continue
-            bboxes.append(bbox)
-            category_ids.append(anno["category_id"])
-
-            if anno["category_id"] == 9:  # pelvis
-                assert "keypoints" in anno
-                keypoint_array = np.array(anno["keypoints"]).reshape(-1, 3)
-                keypoints = [(x, y) for x, y, _ in keypoint_array]
-
-            segm = anno["segmentation"]
-            if isinstance(segm, list):
-                # Convert polygon
-                mask = mask_util.decode(
-                    mask_util.frPyObjects(segm, image_dict["height"], image_dict["width"])
-                )
-                mask = mask[:, :, 0]
-            elif isinstance(segm, dict):
-                # RLE
-                mask = mask_util.decode(segm)
-            else:
-                raise ValueError(
-                    "Cannot transform segmentation of type '{}'!"
-                    "Supported types are: polygons as list[list[float] or ndarray],"
-                    " COCO-style RLE as a dict.".format(type(segm))
-                )
-            masks.append(mask)
-
+        category_ids, keypoints, masks, bboxes = self.decode_annotations(
+            image_dict, annotation_dicts
+        )
         transform = build_augmentation(
             is_train=self.train, resize=self.image_size, use_keypoint=True
         )
@@ -156,8 +125,7 @@ class PerphixImageDataset(PerphixContainer):
 
         inputs = dict(
             image=image,
-            image_idx=int(image_idx_in_dataset),
-            image_id=int(image_dict["id"]),
+            image_id=int(image_id),
         )
 
         targets = dict(
