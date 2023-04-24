@@ -916,102 +916,102 @@ class PerphixDataset(PerphixBase):
 
         h, w = image_vis.shape[:2]
         step = h // 8
-        scale = 4
+        scale = 1
+        thickness = 2
         sep = w // 2
         offset = step // 2
         text_color = (255, 255, 255)
+
+        # Title
         side_panel = cv2.putText(
             side_panel,
-            f"Corridor:",
-            (offset, step * 1 - step // 2),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            text_color,
-            scale,
-            cv2.LINE_AA,
-        )
-        side_panel = cv2.putText(
-            side_panel,
-            seq_names["task"].capitalize().replace("_", " "),
-            (sep, step * 1 - step // 2),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (self.sequence_colors[sequences["task"]] * 255).tolist(),
-            scale,
-            cv2.LINE_AA,
-        )
-        side_panel = cv2.putText(
-            side_panel,
-            f"Activity:",
+            f"Pelphix Simulation",
             (offset, step * 2 - step // 2),
             cv2.FONT_HERSHEY_SIMPLEX,
-            1,
+            2 * scale,
             text_color,
-            scale,
+            thickness,
             cv2.LINE_AA,
         )
-        side_panel = cv2.putText(
+
+        def put_phase(
+            side_panel_: np.ndarray, label: str, phase: str, row: int, color: list[int]
+        ) -> np.ndarray:
+            side_panel_ = cv2.putText(
+                side_panel_,
+                f"{label}:",
+                (offset, step * row - step // 2),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                scale,
+                text_color,
+                thickness,
+                cv2.LINE_AA,
+            )
+            side_panel_ = cv2.putText(
+                side_panel_,
+                phase.capitalize().replace("_", " "),
+                (sep, step * row - step // 2),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                scale,
+                color,
+                thickness,
+                cv2.LINE_AA,
+            )
+            return side_panel_
+
+        side_panel = put_phase(
             side_panel,
-            seq_names["activity"].capitalize().replace("_", " "),
-            (sep, step * 2 - step // 2),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
+            "Corridor",
+            seq_names["task"],
+            3,
+            (self.sequence_colors[sequences["task"]] * 255).tolist(),
+        )
+        side_panel = put_phase(
+            side_panel,
+            "Activity",
+            seq_names["activity"],
+            4,
             (self.sequence_colors[sequences["activity"]] * 255).tolist(),
-            scale,
-            cv2.LINE_AA,
         )
-        side_panel = cv2.putText(
+        side_panel = put_phase(
             side_panel,
-            f"View:",
-            (offset, step * 3 - step // 2),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            text_color,
-            scale,
-            cv2.LINE_AA,
-        )
-        side_panel = cv2.putText(
-            side_panel,
-            seq_names["acquisition"].capitalize().replace("_", " "),
-            (sep, step * 3 - step // 2),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
+            "View",
+            seq_names["acquisition"],
+            5,
             (self.sequence_colors[sequences["acquisition"]] * 255).tolist(),
-            scale,
-            cv2.LINE_AA,
         )
-        side_panel = cv2.putText(
+        side_panel = put_phase(
             side_panel,
-            f"Frame:",
-            (offset, step * 4 - step // 2),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            text_color,
-            scale,
-            cv2.LINE_AA,
-        )
-        side_panel = cv2.putText(
-            side_panel,
-            seq_names["frame"].capitalize().replace("_", " "),
-            (sep, step * 4 - step // 2),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
+            "Frame",
+            seq_names["frame"],
+            6,
             (self.sequence_colors[sequences["frame"]] * 255).tolist(),
-            scale,
-            cv2.LINE_AA,
         )
 
+        margin = h // 20
         image_dir = Path(get_original_cwd()) / "images"
-        logo = cv2.imread(str(image_dir / "arcade_logo_black.png"))
-        logo = cv2.cvtColor(logo, cv2.COLOR_BGR2RGB)
-        lh, lw = logo.shape[:2]
-        new_width = w - offset * 2
-        new_height = int(new_width * lh / lw)
-        logo = cv2.resize(logo, (new_width, new_height))
+        arcade_logo = cv2.imread(str(image_dir / "arcade_logo_black.png"))
+        arcade_logo = cv2.cvtColor(arcade_logo, cv2.COLOR_BGR2RGB)
+        lh, lw = arcade_logo.shape[:2]
+        arcade_h = h // 12
+        arcade_w = int(arcade_h * lw / lh)
+        arcade_logo = cv2.resize(arcade_logo, (arcade_w, arcade_h))
+        x = w - arcade_w - margin
+        y = h - arcade_h - margin
+        side_panel[y : y + arcade_h, x : x + arcade_w] = arcade_logo
 
-        side_panel[
-            h // 2 + 2 * offset : h // 2 + 2 * offset + new_height, offset : offset + new_width
-        ] = logo
+        jhu_logo = cv2.imread(str(image_dir / "jhu_logo_black_bg.png"))
+        jhu_logo = cv2.cvtColor(jhu_logo, cv2.COLOR_BGR2RGB)
+        lh, lw = jhu_logo.shape[:2]
+        jhu_h = arcade_h
+        jhu_w = int(jhu_h * lw / lh)
+        jhu_logo = cv2.resize(jhu_logo, (jhu_w, jhu_h))
+        x = w - arcade_w - margin - jhu_w - margin
+        y = h - jhu_h - margin
+        # log.debug(f"JHU logo: {jhu_logo.shape}, {jhu_logo.dtype}")
+        # log.debug(f"jhu h, w: {jhu_h}, {jhu_w}")
+        # log.debug(f"x, y: {x}, {y}")
+        side_panel[y : y + jhu_h, x : x + jhu_w] = jhu_logo
 
         # TODO: add text for the phase along the bottom.
 
