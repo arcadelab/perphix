@@ -18,7 +18,13 @@ def cli():
 
 @cli.command()
 @click.option("-i", "--input-dir", type=str, required=True, help="Input directory")
-@click.option("-o", "--output-dir", type=str, required=True, help="Output directory")
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    required=True,
+    help="Output directory in which 'case-XXXXXX' directories will be created",
+)
 @click.option(
     "--case",
     type=str,

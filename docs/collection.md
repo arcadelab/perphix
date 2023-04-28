@@ -75,21 +75,59 @@ de-identified after the fact (but before uploading to the sharepoint).
 python -m perphix deidentify -i /PATH/TO/exam/ZZZZZZZZ -o /PATH/TO/tmp --case XXXXXX
 ```
 
-The `deidentify` command removes patient identifiers from the DICOM headers, including
-`PatientName`, `PatientID`, `PatientBirthDate`, `PatientAddress`, `MilitaryRank`, and
-`EthnicGroup`. `PatientID` is replaced with the case number `XXXXXX`, and `PatientName` is
-replaced with `Anonymous`. This is done using the `pydicom` library with the following code block:
+The `deidentify` command removes patient identifying information from the headers with the following code block:
 
 ```python
 import pydicom
-ds = pydicom.dcmread('/PATH/TO/DICOM/FILE')
-ds.PatientID = 'XXXXXX'
-ds.PatientName = 'Anonymous'
-ds.PatientBirthDate = ''
-ds.PatientAddress = ''
-ds.MilitaryRank = ''
-ds.EthnicGroup = ''
-ds.save_as('/PATH/TO/NEW/DICOM/FILE')
+ds = pydicom.dcmread("PATH/TO/DICOM/FILE")
+remove_tag(ds, 0x00080014)  # Instance creator UID
+remove_tag(ds, 0x00080018)  # SOP Instance UID
+remove_tag(ds, 0x00080050)  # Accession Number
+remove_tag(ds, 0x00080081)  # Institution Address
+remove_tag(ds, 0x00080090)  # Referring Physician's Name
+remove_tag(ds, 0x00080092)  # Referring Physician's Address
+remove_tag(ds, 0x00080094)  # Referring Physician's Telephone Numbers
+remove_tag(ds, 0x00081030)  # Study Description
+remove_tag(ds, 0x0008103E)  # Series Description
+remove_tag(ds, 0x00081048)  # Physician(s) of Record
+remove_tag(ds, 0x00081050)  # Performing Physician's Name
+remove_tag(ds, 0x00081060)  # Name of Physician(s) Reading Study
+remove_tag(ds, 0x00081070)  # Operator's Name
+remove_tag(ds, 0x00081080)  # Admitting Diagnoses Description
+remove_tag(ds, 0x00081155)  # Referenced SOP Instance UID
+remove_tag(ds, 0x00082111)  # Derivation Description
+remove_tag(ds, 0x00100010, f"case-{case_id}")  # Patient's Name
+remove_tag(ds, 0x00100020, case_id)  # Patient ID
+remove_tag(ds, 0x00100030)  # Patient's Birth Date
+remove_tag(ds, 0x00100032)  # Patient's Birth Time
+remove_tag(ds, 0x00101000)  # Other Patient IDs
+remove_tag(ds, 0x00101001)  # Other Patient Names
+remove_tag(ds, 0x00101010)  # Patient's Age
+remove_tag(ds, 0x00101020)  # Patient's Size
+remove_tag(ds, 0x00101030)  # Patient's Weight
+remove_tag(ds, 0x00101090)  # Medical Record Locator
+remove_tag(ds, 0x00102160)  # Ethnic Group
+remove_tag(ds, 0x00102180)  # Occupation
+remove_tag(ds, 0x001021B0)  # Additional Patient History
+remove_tag(ds, 0x00104000)  # Patient Comments
+remove_tag(ds, 0x0020000D)  # Study Instance UID
+remove_tag(ds, 0x0020000E)  # Series Instance UID
+remove_tag(ds, 0x00200010)  # Study ID
+remove_tag(ds, 0x00200052)  # Frame of Reference UID
+remove_tag(ds, 0x00200200)  # Synchronization Frame of Reference UID
+remove_tag(ds, 0x00204000)  # Image Comments
+ds.save_as("PATH/TO/OUTPUT/DICOM/FILE")
+```
+
+where `ds` is the `pydicom.Dataset` representing the DICOM image, and `case_id` is the internal case
+number generated above. The `remove_tag` function is defined as
+
+```python
+def remove_tag(ds: pydicom.Dataset, tag: int, value: str = ""):
+    if tag not in ds:
+        return
+
+    ds[tag].value = value
 ```
 
 - Upload the de-identified data to the new procedure folder `procedure-YY` created above.
