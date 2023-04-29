@@ -834,6 +834,7 @@ class PerphixDataset(PerphixBase):
         self,
         image_id: int,
         scale: float = 1.0,
+        show_annotations: bool = True,
     ) -> np.ndarray:
         """Get a visualisation of the image corresponding to the given image index.
 
@@ -846,6 +847,7 @@ class PerphixDataset(PerphixBase):
         Args:
             image_id (int): Image id in the dataset.
             scale (float): The scale to use for the images.
+            show_annotations (bool): Whether to show the annotations.
 
         Returns:
             image_vis: (H, W, 3) uint8 image with annotations shown.
@@ -859,56 +861,64 @@ class PerphixDataset(PerphixBase):
 
         # TODO: scale the image and annotations
 
-        keypoints_vis = vis_utils.draw_keypoints(
-            image, keypoints, names=self.keypoint_pretty_names, colors=self.keypoint_colors
-        )
+        if show_annotations:
+            keypoints_vis = vis_utils.draw_keypoints(
+                image, keypoints, names=self.keypoint_pretty_names, colors=self.keypoint_colors
+            )
 
-        corridor_category_ids, corridor_masks, corridor_colors = [], [], []
-        anatomy_category_ids, anatomy_masks, anatomy_colors = [], [], []
-        for category_id, mask in zip(category_ids, masks):
-            if category_id in [9]:
-                # Skip pelvis
-                continue
-            elif category_id in self.super_categories["corridor"]:
-                corridor_category_ids.append(category_id)
-                corridor_masks.append(mask)
-                corridor_colors.append(self.segmentation_colors[category_id])
-            else:
-                anatomy_category_ids.append(category_id)
-                anatomy_masks.append(mask)
-                anatomy_colors.append(self.segmentation_colors[category_id])
+            corridor_category_ids, corridor_masks, corridor_colors = [], [], []
+            anatomy_category_ids, anatomy_masks, anatomy_colors = [], [], []
+            for category_id, mask in zip(category_ids, masks):
+                if category_id in [9]:
+                    # Skip pelvis
+                    continue
+                elif category_id in self.super_categories["corridor"]:
+                    corridor_category_ids.append(category_id)
+                    corridor_masks.append(mask)
+                    corridor_colors.append(self.segmentation_colors[category_id])
+                else:
+                    anatomy_category_ids.append(category_id)
+                    anatomy_masks.append(mask)
+                    anatomy_colors.append(self.segmentation_colors[category_id])
 
-        corridor_masks = np.array(corridor_masks)
-        anatomy_masks = np.array(anatomy_masks)
-        corridor_names = [self.get_annotation_pretty_name(catid) for catid in corridor_category_ids]
-        anatomy_names = [self.get_annotation_pretty_name(catid) for catid in anatomy_category_ids]
+            corridor_masks = np.array(corridor_masks)
+            anatomy_masks = np.array(anatomy_masks)
+            corridor_names = [
+                self.get_annotation_pretty_name(catid) for catid in corridor_category_ids
+            ]
+            anatomy_names = [
+                self.get_annotation_pretty_name(catid) for catid in anatomy_category_ids
+            ]
 
-        corridor_vis = vis_utils.draw_masks(
-            image,
-            corridor_masks,
-            names=corridor_names,
-            colors=corridor_colors,
-        )
+            corridor_vis = vis_utils.draw_masks(
+                image,
+                corridor_masks,
+                names=corridor_names,
+                colors=corridor_colors,
+            )
 
-        anatomy_vis = vis_utils.draw_masks(
-            image,
-            anatomy_masks,
-            names=anatomy_names,
-            colors=anatomy_colors,
-        )
+            anatomy_vis = vis_utils.draw_masks(
+                image,
+                anatomy_masks,
+                names=anatomy_names,
+                colors=anatomy_colors,
+            )
 
-        # log.debug(f"Image: {image.shape}, {image.dtype}")
-        # log.debug(f"Keypoints: {keypoints_vis.shape}, {keypoints_vis.dtype}")
-        # log.debug(f"Corridor: {corridor_vis.shape}, {corridor_vis.dtype}")
-        # log.debug(f"Anatomy: {anatomy_vis.shape}, {anatomy_vis.dtype}")
+            # log.debug(f"Image: {image.shape}, {image.dtype}")
+            # log.debug(f"Keypoints: {keypoints_vis.shape}, {keypoints_vis.dtype}")
+            # log.debug(f"Corridor: {corridor_vis.shape}, {corridor_vis.dtype}")
+            # log.debug(f"Anatomy: {anatomy_vis.shape}, {anatomy_vis.dtype}")
 
-        image_vis = np.concatenate(
-            [
-                np.concatenate([image, keypoints_vis], axis=1),
-                np.concatenate([anatomy_vis, corridor_vis], axis=1),
-            ],
-            axis=0,
-        )
+            image_vis = np.concatenate(
+                [
+                    np.concatenate([image, keypoints_vis], axis=1),
+                    np.concatenate([anatomy_vis, corridor_vis], axis=1),
+                ],
+                axis=0,
+            )
+
+        else:
+            image_vis = cv2.resize(image, (image.shape[0] * 2, image.shape[1] * 2))
 
         sequences = self.sequences[image_id]
         seq_names = self.get_sequence_names(sequences)
@@ -1017,7 +1027,7 @@ class PerphixDataset(PerphixBase):
 
         return np.concatenate([image_vis, side_panel], axis=1)
 
-    def visualize_procedure(self, procedure_idx: int) -> np.ndarray:
+    def visualize_procedure(self, procedure_idx: int, **kwargs) -> np.ndarray:
         """Get the visualizations for every image in the procedure.
 
         Args:
@@ -1031,7 +1041,7 @@ class PerphixDataset(PerphixBase):
         frames = []
         for i, image_id in enumerate(image_ids):
             log.debug(f"Visualizing image {i} / {len(image_ids)}")
-            frames.append(self.visualize_image(image_id))
+            frames.append(self.visualize_image(image_id, **kwargs))
 
             if i == 0:
                 image_utils.save(f"vis_{i}.png", frames[-1])
@@ -1344,7 +1354,7 @@ class PerphixContainer(PerphixBase):
 
         return counts
 
-    def visualize_image(self, image_idx: int, scale: float = 1.0) -> np.ndarray:
+    def visualize_image(self, image_idx: int, **kwargs) -> np.ndarray:
         """Get a visualisation of the image corresponding to the given image index.
 
         Args:
@@ -1357,9 +1367,9 @@ class PerphixContainer(PerphixBase):
         """
         dataset = self.get_dataset_from_image_idx(image_idx)
         image_id = self.get_image_id(image_idx)
-        return dataset.visualize_image(image_id, scale=scale)
+        return dataset.visualize_image(image_id, **kwargs)
 
-    def visualize_procedure(self, procedure_idx: int) -> np.ndarray:
+    def visualize_procedure(self, procedure_idx: int, **kwargs) -> np.ndarray:
         """Get the visualizations for every image in the procedure.
 
         Args:
@@ -1372,7 +1382,7 @@ class PerphixContainer(PerphixBase):
         dataset = self.get_dataset(procedure_idx)
         procedure_idx_in_dataset = self.get_procedure_idx_in_dataset(procedure_idx)
         log.debug(f"Visualizing procedure {procedure_idx} in dataset {dataset.name}")
-        return dataset.visualize_procedure(procedure_idx_in_dataset)
+        return dataset.visualize_procedure(procedure_idx_in_dataset, **kwargs)
 
     @property
     def num_procedures(self):
