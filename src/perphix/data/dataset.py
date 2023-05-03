@@ -925,7 +925,7 @@ class PerphixDataset(PerphixBase):
         side_panel = 0 * np.ones_like(image_vis)
 
         h, w = image_vis.shape[:2]
-        step = h // 8
+        step = h // 10
         scale = 1
         thickness = 2
         sep = w // 2
@@ -969,6 +969,7 @@ class PerphixDataset(PerphixBase):
             )
             return side_panel_
 
+        side_panel = put_phase(side_panel, f"")
         side_panel = put_phase(
             side_panel,
             "Corridor",
