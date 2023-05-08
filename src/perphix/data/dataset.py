@@ -859,6 +859,8 @@ class PerphixDataset(PerphixBase):
 
         image = cv2.imread(str(image_info["path"]))
 
+        frame_num = image_info["id"] - image_info["first_frame_id"]
+
         # TODO: scale the image and annotations
 
         if show_annotations:
@@ -949,7 +951,7 @@ class PerphixDataset(PerphixBase):
         ) -> np.ndarray:
             side_panel_ = cv2.putText(
                 side_panel_,
-                f"{label}:",
+                f"{label}",
                 (offset, step * row - step // 2),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 scale,
@@ -969,33 +971,33 @@ class PerphixDataset(PerphixBase):
             )
             return side_panel_
 
-        side_panel = put_phase(side_panel, f"")
+        side_panel = put_phase(side_panel, f"{frame_num:03d}", "", 4, text_color)
         side_panel = put_phase(
             side_panel,
-            "Corridor",
+            "Corridor:",
             seq_names["task"],
-            3,
+            5,
             (self.sequence_colors[sequences["task"]] * 255).tolist(),
         )
         side_panel = put_phase(
             side_panel,
-            "Activity",
+            "Activity:",
             seq_names["activity"],
-            4,
+            6,
             (self.sequence_colors[sequences["activity"]] * 255).tolist(),
         )
         side_panel = put_phase(
             side_panel,
-            "View",
+            "View:",
             seq_names["acquisition"],
-            5,
+            7,
             (self.sequence_colors[sequences["acquisition"]] * 255).tolist(),
         )
         side_panel = put_phase(
             side_panel,
-            "Frame",
+            "Frame:",
             seq_names["frame"],
-            6,
+            8,
             (self.sequence_colors[sequences["frame"]] * 255).tolist(),
         )
 
