@@ -1,14 +1,9 @@
-from datetime import datetime
 from typing import List
 import logging
 import numpy as np
-from PIL import Image
-from pathlib import Path
 import cv2
-import matplotlib.pyplot as plt
 from typing import Optional
 import seaborn as sns
-from deepdrr import geo
 from deepdrr.utils.image_utils import ensure_cdim, as_uint8, as_float32
 
 
