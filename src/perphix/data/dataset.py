@@ -937,7 +937,7 @@ class PerphixDataset(PerphixBase):
         # Title
         side_panel = cv2.putText(
             side_panel,
-            f"Pelphix Simulation",
+            f"Pelphix Sim",
             (offset, step * 2 - step // 2),
             cv2.FONT_HERSHEY_SIMPLEX,
             2 * scale,
