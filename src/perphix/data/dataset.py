@@ -833,7 +833,7 @@ class PerphixDataset(PerphixBase):
     def visualize_image(
         self,
         image_id: int,
-        scale: float = 1.0,
+        scale: float = 1.5,
         show_annotations: bool = True,
     ) -> np.ndarray:
         """Get a visualisation of the image corresponding to the given image index.
@@ -922,13 +922,15 @@ class PerphixDataset(PerphixBase):
         else:
             image_vis = cv2.resize(image, (image.shape[0] * 2, image.shape[1] * 2))
 
+        image_vis = cv2.resize(image_vis, (0, 0), fx=scale, fy=scale)
+
         sequences = self.sequences[image_id]
         seq_names = self.get_sequence_names(sequences)
         side_panel = 0 * np.ones_like(image_vis)
 
         h, w = image_vis.shape[:2]
         step = h // 10
-        scale = 1
+        text_scale = 1
         thickness = 2
         sep = w // 2
         offset = step // 2
@@ -940,7 +942,7 @@ class PerphixDataset(PerphixBase):
             f"Pelphix Sim",
             (offset, step * 2 - step // 2),
             cv2.FONT_HERSHEY_SIMPLEX,
-            2 * scale,
+            2 * text_scale,
             text_color,
             thickness,
             cv2.LINE_AA,
@@ -954,7 +956,7 @@ class PerphixDataset(PerphixBase):
                 f"{label}",
                 (offset, step * row - step // 2),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                scale,
+                text_scale,
                 text_color,
                 thickness,
                 cv2.LINE_AA,
@@ -964,7 +966,7 @@ class PerphixDataset(PerphixBase):
                 phase.capitalize().replace("_", " "),
                 (sep, step * row - step // 2),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                scale,
+                text_scale,
                 color,
                 thickness,
                 cv2.LINE_AA,

@@ -33,6 +33,7 @@ class PerphixBase:
             "categories": cls.categories.copy(),
             "sequences": [],
             "seq_categories": cls.seq_categories.copy(),
+            "class_categories": cls.class_categories.copy(),
         }
 
     info = {
@@ -265,7 +266,7 @@ class PerphixBase:
 
     @classmethod
     def get_annotation_pretty_name(cls, catid: int) -> str:
-        return cls._annotation_pretty_names[cls.get_annotation_name(catid)]
+        return cls._annotation_pretty_names[cls.get_annotation_name(catid)].upper()
 
     keypoint_names: list[str] = _annotation_from_id[9]["keypoints"]
     _keypoint_names: dict[str, int] = dict((kname, i) for i, kname in enumerate(keypoint_names))
@@ -404,6 +405,63 @@ class PerphixBase:
     @classmethod
     def get_sequence_name(cls, catid: int) -> str:
         return cls._seq_category_ids[catid]["name"]
+
+    class_categories = [
+        {
+            "supercategory": "view",
+            "id": 1,
+            "name": "ap",
+        },
+        {
+            "supercategory": "view",
+            "id": 2,
+            "name": "lateral",
+        },
+        {
+            "supercategory": "view",
+            "id": 3,
+            "name": "inlet",
+        },
+        {
+            "supercategory": "view",
+            "id": 4,
+            "name": "outlet",
+        },
+        {
+            "supercategory": "view",
+            "id": 5,
+            "name": "oblique_left",
+        },
+        {
+            "supercategory": "view",
+            "id": 6,
+            "name": "oblique_right",
+        },
+        {
+            "supercategory": "view",
+            "id": 7,
+            "name": "teardrop_left",
+        },
+        {
+            "supercategory": "view",
+            "id": 8,
+            "name": "teardrop_right",
+        },
+        {
+            "supercategory": "view",
+            "id": 9,
+            "name": "fluoro_hunting",
+        },
+    ]
+
+    _class_names = dict((ann["name"], ann) for ann in class_categories)
+    _class_catids = dict((ann["id"], ann) for ann in class_categories)
+
+    def get_class_catid(self, name: str) -> int:
+        return self._class_names[name]["id"]
+
+    def get_class_name(self, class_catid: int) -> str:
+        return self._class_catids[class_id]["name"]
 
     @classmethod
     def remove_keypoints(cls, annotation: Dict[str, Any]) -> Dict[str, Any]:
