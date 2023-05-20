@@ -857,7 +857,7 @@ class PerphixDataset(PerphixBase):
         annos = self.segmentations[image_id]
         category_ids, keypoints, masks, bboxes = self.decode_annotations(image_info, annos)
 
-        image = cv2.imread(str(image_info["path"]))
+        image = np.array(cv2.imread(str(image_info["path"])))
 
         frame_num = image_info["id"] - image_info["first_frame_id"]
 

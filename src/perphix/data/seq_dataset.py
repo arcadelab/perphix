@@ -137,7 +137,7 @@ class PerphixSequenceDataset(PerphixContainer):
         seq_heatmaps = []
         seq_keypoints = []
         for anno_dicts, image_dict in zip(annotation_dicts, image_dicts):
-            image = cv2.imread(str(image_dict["path"]))
+            image = np.array(cv2.imread(str(image_dict["path"])))
             category_ids, keypoints, masks, bboxes = self.decode_annotations(image_dict, anno_dicts)
             transformed = transform(
                 image=image,
@@ -194,12 +194,12 @@ class PerphixSequenceDataset(PerphixContainer):
                 if s > 1:
                     prev_prev_image = seq_images[s - 2, :, :, 1]
                 else:
-                    prev_prev_image = np.zeros_like(seq_images[0])
+                    prev_prev_image = np.zeros_like(seq_images[0])[:, :, 0]
 
                 if s > 0:
                     prev_image = seq_images[s - 1, :, :, 1]
                 else:
-                    prev_image = np.zeros_like(seq_images[0])
+                    prev_image = np.zeros_like(seq_images[0])[:, :, 0]
 
                 seq_images[s, :, :, 0] = prev_prev_image
                 seq_images[s, :, :, 1] = prev_image
@@ -225,6 +225,9 @@ class PerphixSequenceDataset(PerphixContainer):
             heatmaps=heatmaps,
             keypoints=keypoints,
         )
+
+        log.debug(f"inputs: {inputs}")
+        log.debug(f"targets: {targets}")
 
         return inputs, targets
 

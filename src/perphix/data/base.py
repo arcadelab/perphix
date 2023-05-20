@@ -597,4 +597,4 @@ class PerphixBase:
                 )
             masks.append(mask)
 
-        return np.array(category_ids), np.array(keypoints), np.array(masks), np.array(bboxes)
+        return np.array(category_ids), np.array(keypoints), masks, np.array(bboxes)
