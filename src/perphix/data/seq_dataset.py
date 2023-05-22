@@ -192,14 +192,14 @@ class PerphixSequenceDataset(PerphixContainer):
         if self.triplets:
             for s in range(seq_len):
                 if s > 1:
-                    prev_prev_image = seq_images[s - 2, :, :, 1]
+                    prev_prev_image = seq_images[s - 2, :, :, 2].copy()
                 else:
-                    prev_prev_image = np.zeros_like(seq_images[0])[:, :, 0]
+                    prev_prev_image = np.zeros_like(seq_images[0, :, :, 0])
 
                 if s > 0:
-                    prev_image = seq_images[s - 1, :, :, 1]
+                    prev_image = seq_images[s - 1, :, :, 2].copy()
                 else:
-                    prev_image = np.zeros_like(seq_images[0])[:, :, 0]
+                    prev_image = np.zeros_like(seq_images[0, :, :, 0])
 
                 seq_images[s, :, :, 0] = prev_prev_image
                 seq_images[s, :, :, 1] = prev_image
@@ -226,8 +226,8 @@ class PerphixSequenceDataset(PerphixContainer):
             keypoints=keypoints,
         )
 
-        log.debug(f"inputs: {inputs}")
-        log.debug(f"targets: {targets}")
+        # log.debug(f"inputs: {inputs}")
+        # log.debug(f"targets: {targets}")
 
         return inputs, targets
 
