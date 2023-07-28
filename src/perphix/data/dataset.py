@@ -33,7 +33,6 @@ from collections import Counter
 from functools import reduce
 import operator
 
-
 from .base import PerphixBase
 from ..utils import load_json, save_json, vis_utils
 
@@ -234,10 +233,10 @@ class PerphixDataset(PerphixBase):
 
     @classmethod
     def load(cls, annotation_path: Path, image_dir: Path, name: Optional[str] = None):
-        log.info(f"Loading dataset from {annotation_path}...")
+        # log.info(f"Loading dataset from {annotation_path}...")
         t = time.time()
         coco = load_json(Path(annotation_path).expanduser())
-        log.info(f"Loaded dataset in {time.time() - t:.2f} seconds.")
+        log.info(f"Loaded {annotation_path} in {time.time() - t:.2f} seconds.")
         return cls(coco, image_dir, name)
 
     @property
@@ -1444,7 +1443,11 @@ class PerphixContainer(PerphixBase):
         """
         if isinstance(annotation_path, list) and isinstance(image_dir, list):
             datasets = []
-            for i, (ann_path, img_dir) in enumerate(zip(annotation_path, image_dir)):
+            for i, (ann_path, img_dir) in track(
+                enumerate(zip(annotation_path, image_dir)),
+                total=len(annotation_path),
+                description="Loading datasets...",
+            ):
                 datasets.append(
                     PerphixDataset.load(ann_path, img_dir, name=None if name is None else name[i])
                 )
