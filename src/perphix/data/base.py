@@ -64,7 +64,7 @@ class PerphixBase:
     ]
 
     # For instance segmentation/detection, there are X supercategories of object: instrument, patient, corridor
-    categories = [
+    _base_categories = [
         {
             "supercategory": "instrument",  # 0
             "id": 1,
@@ -228,6 +228,8 @@ class PerphixBase:
         },
     ]
 
+    num_categories = len(_base_categories)
+
     _annotation_pretty_names = {
         "wire": "wire",
         "screw": "screw",
@@ -248,8 +250,8 @@ class PerphixBase:
         "teardrop_right": "R teardrop",
     }
 
-    _annotation_ids = dict((ann["name"], ann["id"]) for ann in categories)
-    _annotation_from_id = dict((ann["id"], ann) for ann in categories)
+    _annotation_ids = dict((ann["name"], ann["id"]) for ann in _base_categories)
+    _annotation_from_id = dict((ann["id"], ann) for ann in _base_categories)
 
     @classmethod
     def get_annotation_catid(cls, name: str) -> int:
@@ -461,7 +463,7 @@ class PerphixBase:
         return self._class_names[name]["id"]
 
     def get_class_name(self, class_catid: int) -> str:
-        return self._class_catids[class_id]["name"]
+        return self._class_catids[class_catid]["name"]
 
     @classmethod
     def remove_keypoints(cls, annotation: Dict[str, Any]) -> Dict[str, Any]:

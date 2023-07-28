@@ -12,7 +12,7 @@ def build_augmentation(
     is_train: bool = True,
     image_only: bool = False,
     resize: Optional[int] = None,
-):
+) -> A.Compose:
     if image_only:
         kwargs = dict()
     elif use_keypoint:

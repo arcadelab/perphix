@@ -153,7 +153,7 @@ In detail, here are the fields of each dictionary:
             "seq_length": "The length of the sequence.",
             "first_frame_id": "The ID of the first image in the sequence.",
             "case_name": "The name (case-XXXXXX) of the case. (Only when simulating from the NMDID dataset)",
-            "classes": "Integer list of the class categories the image belongs to.",
+            "standard_view_angles": "Angle to each standard view in degrees, eg {'ap': 10}",
         },
         ...
     ],
@@ -197,13 +197,5 @@ In detail, here are the fields of each dictionary:
         },
         ...
     ],
-    "classes": [
-        {
-            "supercategory": "The supercategory of the class.",
-            "id": "The ID of the class.",
-            "name": "The name of the class.",
-        },
-        ...
-    ]
 }
 ```

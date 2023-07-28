@@ -20,7 +20,7 @@ import sys
 from PIL import Image
 import cv2
 import seaborn as sns
-from deepdrr.utils import image_utils
+from deepdrr.utils import image_utils, data_utils
 from hydra.utils import get_original_cwd
 
 import logging
@@ -125,6 +125,23 @@ class PerphixDataset(PerphixBase):
         first_frame_ids (list[int]): List of first frame ids.
 
     """
+
+    # try fetching logos
+    try:
+        _jhu_logo_path = data_utils.download(
+            "https://benjamindkilleen.com/files/jhu_logo_black_bg.png",
+            root="/tmp",
+            filename="jhu_logo_black_bg.png",
+        )
+        _arcade_logo_path = data_utils.download(
+            "https://benjamindkilleen.com/files/arcade_logo_black.png",
+            root="/tmp",
+            filename="arcade_logo_black.png",
+        )
+    except Exception as e:
+        log.exception(e)
+        _jhu_logo_path = None
+        _arcade_logo_path = None
 
     def __init__(
         self,
@@ -835,6 +852,8 @@ class PerphixDataset(PerphixBase):
         image_id: int,
         scale: float = 1.5,
         show_annotations: bool = True,
+        show_phases: bool = True,
+        show_logos: bool = True,
     ) -> np.ndarray:
         """Get a visualisation of the image corresponding to the given image index.
 
@@ -848,6 +867,8 @@ class PerphixDataset(PerphixBase):
             image_id (int): Image id in the dataset.
             scale (float): The scale to use for the images.
             show_annotations (bool): Whether to show the annotations.
+            show_phases (bool): Whether to show the phases on the right panel.
+                Set to false if sequences is empty.
 
         Returns:
             image_vis: (H, W, 3) uint8 image with annotations shown.
@@ -906,11 +927,6 @@ class PerphixDataset(PerphixBase):
                 colors=anatomy_colors,
             )
 
-            # log.debug(f"Image: {image.shape}, {image.dtype}")
-            # log.debug(f"Keypoints: {keypoints_vis.shape}, {keypoints_vis.dtype}")
-            # log.debug(f"Corridor: {corridor_vis.shape}, {corridor_vis.dtype}")
-            # log.debug(f"Anatomy: {anatomy_vis.shape}, {anatomy_vis.dtype}")
-
             image_vis = np.concatenate(
                 [
                     np.concatenate([image, keypoints_vis], axis=1),
@@ -924,9 +940,7 @@ class PerphixDataset(PerphixBase):
 
         image_vis = cv2.resize(image_vis, (0, 0), fx=scale, fy=scale)
 
-        sequences = self.sequences[image_id]
-        seq_names = self.get_sequence_names(sequences)
-        side_panel = 0 * np.ones_like(image_vis)
+        side_panel = np.zeros_like(image_vis)
 
         h, w = image_vis.shape[:2]
         step = h // 10
@@ -973,62 +987,61 @@ class PerphixDataset(PerphixBase):
             )
             return side_panel_
 
-        side_panel = put_phase(side_panel, f"{frame_num:03d}", "", 4, text_color)
-        side_panel = put_phase(
-            side_panel,
-            "Corridor:",
-            seq_names["task"],
-            5,
-            (self.sequence_colors[sequences["task"]] * 255).tolist(),
-        )
-        side_panel = put_phase(
-            side_panel,
-            "Activity:",
-            seq_names["activity"],
-            6,
-            (self.sequence_colors[sequences["activity"]] * 255).tolist(),
-        )
-        side_panel = put_phase(
-            side_panel,
-            "View:",
-            seq_names["acquisition"],
-            7,
-            (self.sequence_colors[sequences["acquisition"]] * 255).tolist(),
-        )
-        side_panel = put_phase(
-            side_panel,
-            "Frame:",
-            seq_names["frame"],
-            8,
-            (self.sequence_colors[sequences["frame"]] * 255).tolist(),
-        )
+        if show_phases and image_id in self.sequences:
+            sequences = self.sequences[image_id]
+            seq_names = self.get_sequence_names(sequences)
+            side_panel = put_phase(side_panel, f"{frame_num:03d}", "", 4, text_color)
+            side_panel = put_phase(
+                side_panel,
+                "Corridor:",
+                seq_names["task"],
+                5,
+                (self.sequence_colors[sequences["task"]] * 255).tolist(),
+            )
+            side_panel = put_phase(
+                side_panel,
+                "Activity:",
+                seq_names["activity"],
+                6,
+                (self.sequence_colors[sequences["activity"]] * 255).tolist(),
+            )
+            side_panel = put_phase(
+                side_panel,
+                "View:",
+                seq_names["acquisition"],
+                7,
+                (self.sequence_colors[sequences["acquisition"]] * 255).tolist(),
+            )
+            side_panel = put_phase(
+                side_panel,
+                "Frame:",
+                seq_names["frame"],
+                8,
+                (self.sequence_colors[sequences["frame"]] * 255).tolist(),
+            )
 
         margin = h // 20
-        image_dir = Path(get_original_cwd()) / "images"
-        arcade_logo = cv2.imread(str(image_dir / "arcade_logo_black.png"))
-        arcade_logo = cv2.cvtColor(arcade_logo, cv2.COLOR_BGR2RGB)
-        lh, lw = arcade_logo.shape[:2]
-        arcade_h = h // 12
-        arcade_w = int(arcade_h * lw / lh)
-        arcade_logo = cv2.resize(arcade_logo, (arcade_w, arcade_h))
-        x = w - arcade_w - margin
-        y = h - arcade_h - margin
-        side_panel[y : y + arcade_h, x : x + arcade_w] = arcade_logo
+        if show_logos and self._arcade_logo_path is not None:
+            arcade_logo = cv2.imread(str(self._arcade_logo_path))
+            arcade_logo = cv2.cvtColor(arcade_logo, cv2.COLOR_BGR2RGB)
+            lh, lw = arcade_logo.shape[:2]
+            arcade_h = h // 12
+            arcade_w = int(arcade_h * lw / lh)
+            arcade_logo = cv2.resize(arcade_logo, (arcade_w, arcade_h))
+            x = w - arcade_w - margin
+            y = h - arcade_h - margin
+            side_panel[y : y + arcade_h, x : x + arcade_w] = arcade_logo
 
-        jhu_logo = cv2.imread(str(image_dir / "jhu_logo_black_bg.png"))
-        jhu_logo = cv2.cvtColor(jhu_logo, cv2.COLOR_BGR2RGB)
-        lh, lw = jhu_logo.shape[:2]
-        jhu_h = arcade_h
-        jhu_w = int(jhu_h * lw / lh)
-        jhu_logo = cv2.resize(jhu_logo, (jhu_w, jhu_h))
-        x = w - arcade_w - margin - jhu_w - margin
-        y = h - jhu_h - margin
-        # log.debug(f"JHU logo: {jhu_logo.shape}, {jhu_logo.dtype}")
-        # log.debug(f"jhu h, w: {jhu_h}, {jhu_w}")
-        # log.debug(f"x, y: {x}, {y}")
-        side_panel[y : y + jhu_h, x : x + jhu_w] = jhu_logo
-
-        # TODO: add text for the phase along the bottom.
+        if show_logos and self._jhu_logo_path is not None:
+            jhu_logo = cv2.imread(str(self._jhu_logo_path))
+            jhu_logo = cv2.cvtColor(jhu_logo, cv2.COLOR_BGR2RGB)
+            lh, lw = jhu_logo.shape[:2]
+            jhu_h = arcade_h
+            jhu_w = int(jhu_h * lw / lh)
+            jhu_logo = cv2.resize(jhu_logo, (jhu_w, jhu_h))
+            x = w - arcade_w - margin - jhu_w - margin
+            y = h - jhu_h - margin
+            side_panel[y : y + jhu_h, x : x + jhu_w] = jhu_logo
 
         return np.concatenate([image_vis, side_panel], axis=1)
 
@@ -1127,7 +1140,7 @@ class PerphixContainer(PerphixBase):
         Returns:
             int: The image index in the dataset corresponding to the given image index.
         """
-        dataset_idx: int = min(np.argwhere(image_idx < self.cumulative_num_images))
+        dataset_idx: int = min(np.argwhere(image_idx < self.cumulative_num_images)[0])
         # Have to subtract the cumulative number of images in the previous datasets to get the index in the current
         # dataset.
         if dataset_idx == 0:
@@ -1414,6 +1427,28 @@ class PerphixContainer(PerphixBase):
         return cls(datasets, **kwargs)
 
     @classmethod
-    def load(cls, annotation_path: Path, image_dir: Path, name: Optional[str] = None, **kwargs):
-        dataset = PerphixDataset.load(annotation_path, image_dir, name=name)
-        return cls([dataset], **kwargs)
+    def load(
+        cls,
+        annotation_path: Union[Path, list[Path]],
+        image_dir: Union[Path, list[Path]],
+        name: None | str | list[str] = None,
+        **kwargs,
+    ):
+        """Load a dataset or collection of datasets.
+
+        Args:
+            annotation_path (Union[Path, list[Path]]): Path to the annotation file or list of paths to annotation files.
+            image_dir (Union[Path, list[Path]]): Path to the image directory or list of paths to image directories.
+            name (Union[None, str, list[str]], optional): Name of the dataset or list of names of the datasets. Defaults to None.
+
+        """
+        if isinstance(annotation_path, list) and isinstance(image_dir, list):
+            datasets = []
+            for i, (ann_path, img_dir) in enumerate(zip(annotation_path, image_dir)):
+                datasets.append(
+                    PerphixDataset.load(ann_path, img_dir, name=None if name is None else name[i])
+                )
+            return cls(datasets, **kwargs)
+        else:
+            dataset = PerphixDataset.load(annotation_path, image_dir, name=name)
+            return cls([dataset], **kwargs)
