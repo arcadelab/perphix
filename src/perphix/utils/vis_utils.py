@@ -96,9 +96,9 @@ def draw_masks(
         contours, _ = cv2.findContours(
             bool_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
-        image = as_float32(
-            cv2.drawContours(as_uint8(image), contours, -1, (255 * colors[i]).tolist(), 1)
-        )
+        image = as_uint8(image)
+        cv2.drawContours(image, contours, -1, (255 * colors[i]).tolist(), 1)
+        image = as_float32(image)
 
     image = as_uint8(image)
 
