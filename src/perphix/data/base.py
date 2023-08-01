@@ -30,7 +30,7 @@ class PerphixBase:
             "licenses": cls.licenses.copy(),
             "images": [],
             "annotations": [],
-            "categories": cls.categories.copy(),
+            "categories": cls._base_categories.copy(),
             "sequences": [],
             "seq_categories": cls.seq_categories.copy(),
             "class_categories": cls.class_categories.copy(),

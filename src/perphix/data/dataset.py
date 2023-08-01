@@ -232,12 +232,12 @@ class PerphixDataset(PerphixBase):
             raise TypeError("Can only merge with another dataset or container.")
 
     @classmethod
-    def load(cls, annotation_path: Path, image_dir: Path, name: Optional[str] = None):
+    def load(cls, annotation_path: Path, image_dir: Path, name: Optional[str] = None, **kwargs):
         # log.info(f"Loading dataset from {annotation_path}...")
         t = time.time()
         coco = load_json(Path(annotation_path).expanduser())
         log.info(f"Loaded {annotation_path} in {time.time() - t:.2f} seconds.")
-        return cls(coco, image_dir, name)
+        return cls(coco, image_dir, name, **kwargs)
 
     @property
     def num_procedures(self) -> int:
