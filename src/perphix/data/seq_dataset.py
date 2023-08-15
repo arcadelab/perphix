@@ -156,7 +156,7 @@ class PerphixSequenceDataset(PerphixContainer):
             seq_images.append(image)
 
             # Make and append the masks for the sequence
-            seq_mask = np.zeros((len(self.categories), H, W), dtype=bool)
+            seq_mask = np.zeros((self.num_categories, H, W), dtype=bool)
             for mask, cat_id in zip(masks, category_ids):
                 label = dataset.label_from_category_id[cat_id]
                 seq_mask[label] = np.logical_or(seq_mask[label], mask)
