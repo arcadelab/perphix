@@ -209,7 +209,67 @@ class PerphixDataset(PerphixBase):
             )
 
         log.info(f"Saving dataset to {path}...")
-        save_json(path, self.annotation)
+        t = time.time()
+        with open(path, "w") as f:
+            json.dump(self.annotation, f)
+        log.info(f"Saved {path} in {time.time() - t:.2f} seconds.")
+
+    def add_image(
+            self, 
+            image_path: Path, 
+            case_name: str = "",
+            standard_view_angles: dict[str, float] = {}, frame_id: int = -1, first_frame_id: int = 0,):
+        """Add an image to the dataset."""
+        image_id = len(self.images)
+        image = cv2.imread(str(image_path))
+
+        image_info = {
+            "id": image_id,
+            "file_name": image_path.name,
+            "height": image.shape[0],
+            "width": image.shape[1],
+            "date_captured": datetime.now().isoformat(),
+            "license": 0,
+            "frame_id": frame_id,
+            "seq_length": -1,  # has to be fixed later
+            "first_frame_id": first_frame_id,
+            "case_name": case_name, # name of the corresponding CT, for obtaining ground truth?
+
+        }
+
+        raise NotImplementedError("TODO: add image to dataset. Also add annotations.")
+
+        if image_id in self.images:
+                log.error("Skipping duplicate image id: {}".format(image_info))
+            else:
+                image_info["path"] = str(self.image_dir / image_info["file_name"])
+                self.images[image_id] = image_info
+
+        self.annotation["images"].append(
+            {
+                "license": 0,
+                "file_name": image_path.name,
+                "height": image.shape[0],
+                "width": image.shape[1],
+                "date_captured": datetime.datetime.now().isoformat(),
+                "id": image_id,  # to be changed
+                "frame_id": image_id,
+                "seq_length": -1,  # to be changed
+                "first_frame_id": 0,  # to be changed
+                "case_name": case_name, # name of the corresponding CT, for obtaining ground truth?
+                "standard_view_angles": standard_view_angles,
+            }
+        )
+
+    def add_image_sequence(self, first_frame_id: int, seq_length: int):
+        # Adds an image sequence, modifying the necessary images.
+
+        raise NotImplementedError
+    
+    def add_sequence(self):
+        # Adds a sequence annotation
+
+        raise NotImplementedError
 
     def as_keypoints(self) -> PerphixDataset:
         return PerphixDataset(self.pelvis_only(self.annotation), self.image_dir, self.name)
@@ -1455,3 +1515,7 @@ class PerphixContainer(PerphixBase):
         else:
             dataset = PerphixDataset.load(annotation_path, image_dir, name=name)
             return cls([dataset], **kwargs)
+
+    def save(self, save_dir: Path):
+        for dataset in self.datasets:
+            dataset.save(save_dir / f"{dataset.name}.json")
