@@ -252,6 +252,10 @@ class PerphixBase:
 
     _annotation_ids = dict((ann["name"], ann["id"]) for ann in _base_categories)
     _annotation_from_id = dict((ann["id"], ann) for ann in _base_categories)
+    _annotation_names: dict[str, int] = dict(
+        (ann["name"], i) for i, ann in enumerate(_base_categories)
+    )
+    _annotation_labels: dict[int, str] = dict((i, ann["name"]) for i, ann in (_base_categories))
 
     @classmethod
     def get_annotation_catid(cls, name: str) -> int:
@@ -270,6 +274,16 @@ class PerphixBase:
     def get_annotation_pretty_name(cls, catid: int) -> str:
         return cls._annotation_pretty_names[cls.get_annotation_name(catid)].upper()
 
+    @classmethod
+    def get_annotation_name_from_label(cls, label: int) -> List[str]:
+        """Get the pretty name of the annotation with the given label."""
+        return cls._annotation_labels[label]
+
+    @classmethod
+    def get_annotation_pretty_name_from_label(cls, label: int) -> int:
+        name = cls._annotation_labels[label]
+        return cls._annotation_pretty_names[name].upper()
+
     keypoint_names: list[str] = _annotation_from_id[9]["keypoints"]
     _keypoint_names: dict[str, int] = dict((kname, i) for i, kname in enumerate(keypoint_names))
     _keypoint_labels: dict[int, str] = dict((i, kname) for i, kname in enumerate(keypoint_names))
@@ -278,10 +292,12 @@ class PerphixBase:
 
     @classmethod
     def get_keypoint_name(cls, label: int) -> str:
+        """Get the name of the keypoint with the given label."""
         return cls._keypoint_labels[label]
 
     @classmethod
     def get_keypoint_pretty_name(cls, label: int) -> str:
+        """Get the pretty name of the keypoint with the given label."""
         return cls._keypoint_labels[label].replace("_", " ").upper()
 
     seq_categories = [

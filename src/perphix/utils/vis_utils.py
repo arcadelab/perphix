@@ -22,7 +22,7 @@ def draw_keypoints(
     palette: str = "hls",
     seed: Optional[int] = None,
 ) -> np.ndarray:
-    """Draw keypoints on an image.
+    """Draw keypoints on an image (copy).
 
     Args:
         image (np.ndarray): the image to draw on.
@@ -30,6 +30,9 @@ def draw_keypoints(
             -1 indicates no keypoint present.
         names (List[str], optional): the names of the keypoints. Defaults to None.
         colors (np.ndarray, optional): the colors to use for each keypoint. Defaults to None.
+
+    Returns:
+        np.ndarray: the image with the keypoints drawn.
 
     """
 
@@ -74,7 +77,7 @@ def draw_masks(
     palette: str = "hls",
     seed: Optional[int] = None,
 ) -> np.ndarray:
-    """Draw contours of masks on an image.
+    """Draw contours of masks on an image (copy).
 
     Args:
         image (np.ndarray): the image to draw on.
