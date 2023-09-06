@@ -215,10 +215,13 @@ class PerphixDataset(PerphixBase):
         log.info(f"Saved {path} in {time.time() - t:.2f} seconds.")
 
     def add_image(
-            self, 
-            image_path: Path, 
-            case_name: str = "",
-            standard_view_angles: dict[str, float] = {}, frame_id: int = -1, first_frame_id: int = 0,):
+        self,
+        image_path: Path,
+        case_name: str = "",
+        standard_view_angles: dict[str, float] = {},
+        frame_id: int = -1,
+        first_frame_id: int = 0,
+    ):
         """Add an image to the dataset."""
         image_id = len(self.images)
         image = cv2.imread(str(image_path))
@@ -233,17 +236,16 @@ class PerphixDataset(PerphixBase):
             "frame_id": frame_id,
             "seq_length": -1,  # has to be fixed later
             "first_frame_id": first_frame_id,
-            "case_name": case_name, # name of the corresponding CT, for obtaining ground truth?
-
+            "case_name": case_name,  # name of the corresponding CT, for obtaining ground truth?
         }
 
         raise NotImplementedError("TODO: add image to dataset. Also add annotations.")
 
         if image_id in self.images:
-                log.error("Skipping duplicate image id: {}".format(image_info))
-            else:
-                image_info["path"] = str(self.image_dir / image_info["file_name"])
-                self.images[image_id] = image_info
+            log.error("Skipping duplicate image id: {}".format(image_info))
+        else:
+            image_info["path"] = str(self.image_dir / image_info["file_name"])
+            self.images[image_id] = image_info
 
         self.annotation["images"].append(
             {
@@ -256,7 +258,7 @@ class PerphixDataset(PerphixBase):
                 "frame_id": image_id,
                 "seq_length": -1,  # to be changed
                 "first_frame_id": 0,  # to be changed
-                "case_name": case_name, # name of the corresponding CT, for obtaining ground truth?
+                "case_name": case_name,  # name of the corresponding CT, for obtaining ground truth?
                 "standard_view_angles": standard_view_angles,
             }
         )
@@ -265,7 +267,7 @@ class PerphixDataset(PerphixBase):
         # Adds an image sequence, modifying the necessary images.
 
         raise NotImplementedError
-    
+
     def add_sequence(self):
         # Adds a sequence annotation
 

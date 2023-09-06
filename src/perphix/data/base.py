@@ -255,7 +255,9 @@ class PerphixBase:
     _annotation_names: dict[str, int] = dict(
         (ann["name"], i) for i, ann in enumerate(_base_categories)
     )
-    _annotation_labels: dict[int, str] = dict((i, ann["name"]) for i, ann in (_base_categories))
+    _annotation_labels: dict[int, str] = dict(
+        (i, ann["name"]) for i, ann in enumerate(_base_categories)
+    )
 
     @classmethod
     def get_annotation_catid(cls, name: str) -> int:
