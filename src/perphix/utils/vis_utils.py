@@ -36,6 +36,9 @@ def draw_keypoints(
 
     """
 
+    if len(keypoints) == 0:
+        return image
+
     image = ensure_cdim(as_uint8(image)).copy()
     keypoints = np.array(keypoints)
     if colors is None:
@@ -47,21 +50,26 @@ def draw_keypoints(
     if np.any(colors < 1):
         colors = (colors * 255).astype(int)
 
+    fontscale = 0.75 / 512 * image.shape[0]
+    thickness = max(int(1 / 256 * image.shape[0]), 1)
+    offset = max(5, int(5 / 512 * image.shape[0]))
+    radius = max(1, int(5 / 512 * image.shape[0]))
+
     for i, keypoint in enumerate(keypoints):
         if np.any(keypoint < 0):
             continue
         color = colors[i].tolist()
         x, y = keypoint
-        image = cv2.circle(image, (int(x), int(y)), 5, color, -1)
+        image = cv2.circle(image, (int(x), int(y)), radius, color, -1)
         if names is not None:
             image = cv2.putText(
                 image,
                 names[i],
-                (int(x) + 5, int(y) - 5),
+                (int(x) + offset, int(y) - offset),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
+                fontscale,
                 color,
-                1,
+                thickness,
                 cv2.LINE_AA,
             )
     return image
@@ -81,10 +89,11 @@ def draw_masks(
 
     Args:
         image (np.ndarray): the image to draw on.
-        masks (np.ndarray): the masks to draw. [H, W, num_masks] array of masks.
+        masks (np.ndarray): the masks to draw. [num_masks, H, W] array of masks.
     """
 
     image = as_float32(image)
+    image = ensure_cdim(image)
     if colors is None:
         colors = np.array(sns.color_palette(palette, masks.shape[0]))
         if seed is not None:
@@ -94,6 +103,7 @@ def draw_masks(
     image *= 1 - alpha
     for i, mask in enumerate(masks):
         bool_mask = mask > threshold
+
         image[bool_mask] = colors[i] * alpha + image[bool_mask] * (1 - alpha)
 
         contours, _ = cv2.findContours(
@@ -105,10 +115,15 @@ def draw_masks(
 
     image = as_uint8(image)
 
+    fontscale = 0.75 / 512 * image.shape[0]
+    thickness = max(int(1 / 256 * image.shape[0]), 1)
+
     if names is not None:
         for i, mask in enumerate(masks):
             bool_mask = mask > threshold
             ys, xs = np.argwhere(bool_mask).T
+            if len(ys) == 0:
+                continue
             y = (np.min(ys) + np.max(ys)) / 2
             x = (np.min(xs) + np.max(xs)) / 2
             image = cv2.putText(
@@ -116,9 +131,9 @@ def draw_masks(
                 names[i],
                 (int(x) + 5, int(y) - 5),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
+                fontscale,
                 (255 * colors[i]).tolist(),
-                1,
+                thickness,
                 cv2.LINE_AA,
             )
 
