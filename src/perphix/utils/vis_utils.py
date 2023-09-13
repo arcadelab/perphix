@@ -14,6 +14,62 @@ log = logging.getLogger(__name__)
 # factor.
 
 
+def draw_corridor(
+    image: np.ndarray,
+    corridor: np.ndarray,
+    color: Optional[np.ndarray] = None,
+    thickness: int = 1,
+    palette: str = "hls",
+    name: Optional[str] = None,
+):
+    """Draw a corridor on an image (copy).
+
+    Args:
+        image (np.ndarray): the image to draw on.
+        corridor (np.ndarray): the corridor to draw. [2, 2] array of [x, y] coordinates.
+
+    """
+
+    image = draw_keypoints(image, corridor, names=["0", "1"], palette=palette)
+
+    if color is None:
+        color = np.array(sns.color_palette(palette, 1))[0]
+
+    if np.any(color < 1):
+        color = (color * 255).astype(int)
+
+    color = np.array(color).tolist()
+    log.debug(f"Drawing corridor with color: {color}")
+
+    # Draw a line between the two points
+    image = cv2.line(
+        image,
+        (int(corridor[0, 0]), int(corridor[0, 1])),
+        (int(corridor[1, 0]), int(corridor[1, 1])),
+        color,
+        thickness,
+    )
+
+    # Draw the name of the corridor
+    if name is not None:
+        fontscale = 0.75 / 512 * image.shape[0]
+        thickness = max(int(1 / 256 * image.shape[0]), 1)
+        offset = max(5, int(5 / 512 * image.shape[0]))
+        x, y = np.mean(corridor, axis=0)
+        image = cv2.putText(
+            image,
+            name,
+            (int(x) + offset, int(y) - offset),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            fontscale,
+            color,
+            thickness,
+            cv2.LINE_AA,
+        )
+
+    return image
+
+
 def draw_keypoints(
     image: np.ndarray,
     keypoints: np.ndarray,
