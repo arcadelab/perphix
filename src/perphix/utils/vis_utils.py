@@ -14,6 +14,49 @@ log = logging.getLogger(__name__)
 # factor.
 
 
+def combine_heatmap(
+    image: np.ndarray,
+    heatmap: np.ndarray,
+    channel=0,
+    normalize=True,
+) -> np.ndarray:
+    """Visualize a heatmap on an image.
+
+    Args:
+        image (Union[np.ndarray, torch.Tensor]): 2D float image, [H, W], or [3, H, W]
+        heatmap (Union[np.ndarray, torch.Tensor]): 2D float heatmap, [H, W], or [C, H, W] array of heatmaps.
+        channel (int, optional): Which channel to use for the heatmap. For an RGB image, channel 0 would render the heatmap in red.. Defaults to 0.
+        normalize (bool, optional): Whether to normalize the heatmap. This can lead to all-red images if no landmark was detected. Defaults to True.
+
+    Returns:
+        np.ndarray: A [H,W,3] numpy image.
+    """
+    image_arr = ensure_cdim(image, c=3)
+    heatmap_arr = ensure_cdim(heatmap, c=1)
+
+    seg = False
+    if heatmap_arr.dtype == bool:
+        heatmap_arr = heatmap_arr.astype(np.float32)
+        seg = True
+
+    _, h, w = heatmap_arr.shape
+    heat_sum = np.zeros((h, w), dtype=np.float32)
+    for heat in heatmap_arr:
+        heat_min = heat.min()
+        heat_max = 4 if seg else heat.max()
+        heat_min_minus_max = heat_max - heat_min
+        heat = heat - heat_min
+        if heat_min_minus_max > 1.0e-3:
+            heat /= heat_min_minus_max
+
+        heat_sum += heat
+
+    for c in range(3):
+        image_arr[c] = ((1 - heat_sum) * image_arr[c]) + (heat_sum if c == channel else 0)
+
+    return image_arr.transpose(1, 2, 0)
+
+
 def draw_corridor(
     image: np.ndarray,
     corridor: np.ndarray,
