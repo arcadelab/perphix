@@ -1,0 +1,4 @@
+# Docs
+mkdocs
+pymdown-extensions
+mkdocstrings[python]
