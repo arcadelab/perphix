@@ -2,15 +2,20 @@ site_name: Perphix
 site_url: https://example.com/
 nav:
   - Home: index.md
-  - Data: data.md
-  - Collection: collection.md
-  - Annotation: annotation.md
+  - Data:
+    - Dataset Format: data/format.md
+    - Real Data Collection: data/collection.md
+  - API Reference:
+    - perphix.data: reference/data.md
+    - perphix.utils.vis_utils: reference/vis_utils.md
+    - perphix.augment: reference/augment.md
   - About: about.md
 
 theme:
-  name: mkdocs
+  name: readthedocs
   features:
     - content.code.copy
+  navigation_depth: 1
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -20,3 +25,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+
+
+plugins:
+  - search
+  - mkdocstrings

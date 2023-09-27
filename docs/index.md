@@ -1,14 +1,7 @@
-# Welcome to the Perphix Docs
+# Perphix
 
 Documentation for the collection, annotation, and usage of X-ray image sequences for surgical phase
 recognition.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
 
 ## Meta
 

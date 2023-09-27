@@ -1,4 +1,4 @@
-# Data Collection
+# Patient Data Collection
 
 This document describes the process of collecting and de-identifying pre-operative CT images and
 X-ray image sequences. Since the collection and de-identification process depends on the source from
@@ -35,7 +35,7 @@ procedure number.
 
 ### USB Export from Siemens Cios Mobile C-arm
 
-![Cios](img/siemens-cios.png)
+![Cios](collection/img/siemens-cios.png)
 
 The Cios is a flat-panel mobile C-arm preferred by Dr. Osgood. The C-arm is equipped with export
 functionalities that de-identify data directly. Following the procedure, navigate to the viewing
