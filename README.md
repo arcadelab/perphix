@@ -48,14 +48,13 @@ The documentation for this project is hosted on [Read the Docs](https://perphix.
 If you find this work useful in your research, please consider citing:
 
 ```bibtex
-@InProceedings{KilleenPelphix2023,
+@article{Pelphix2023,
  author = {Killeen, Benjamin D. and Zhang, Han and Mangulabnan, Jan and Armand, Mehran and Taylor, Russel H. and Osgood, Greg and Unberath, Mathias},
  title = {{Pelphix: Surgical Phase Recognition from X-ray Images in Percutaneous Pelvic Fixation}},
- booktitle={Medical Image Computing and Computer Assisted Intervention -- MICCAI 2023},
  journal = {arXiv},
  year = {2023},
- publisher = {Springer International Publishing},
- address = {Cham},
- pages = {to appear},
+ month = apr,
+ eprint = {2304.09285},
+ doi = {10.48550/arXiv.2304.09285}
 }
 ```
