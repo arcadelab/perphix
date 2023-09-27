@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="perphix",
-    version="0.0.0",
+    version="0.0.1",
     description="Utilities and documentation for the collection, annotation, and usage of X-ray image sequences for surgical phase recognition.",
     package_dir={"": "src"},
     long_description=open("README.md").read(),

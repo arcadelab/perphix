@@ -16,16 +16,27 @@ documentation for the Perphix datasets. It is provided separately for ease of in
 
 ## Installation
 
+Perphix can be installed from PyPI:
+
 ```bash
 pip install perphix
 ```
 
-or from source:
+### Development
+
+Clone the repository and install from source using pip:
 
 ```bash
 git clone git@github.com:arcadelab/perphix.git
 cd perphix
 pip install -e .
+```
+
+Alternatively, you can use the included `environment.yml` file to install an Anaconda environment.
+
+```bash
+conda env create -f environment.yml
+conda activate perphix
 ```
 
 ## Documentation
@@ -37,5 +48,14 @@ The documentation for this project is hosted on [Read the Docs](https://perphix.
 If you find this work useful in your research, please consider citing:
 
 ```bibtex
-TODO: add citation to MICCAI work.
+@InProceedings{KilleenPelphix2023,
+ author = {Killeen, Benjamin D. and Zhang, Han and Mangulabnan, Jan and Armand, Mehran and Taylor, Russel H. and Osgood, Greg and Unberath, Mathias},
+ title = {{Pelphix: Surgical Phase Recognition from X-ray Images in Percutaneous Pelvic Fixation}},
+ booktitle={Medical Image Computing and Computer Assisted Intervention -- MICCAI 2023},
+ journal = {arXiv},
+ year = {2023},
+ publisher = {Springer International Publishing},
+ address = {Cham},
+ pages = {to appear},
+}
 ```
