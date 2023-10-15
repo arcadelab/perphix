@@ -14,6 +14,29 @@ log = logging.getLogger(__name__)
 # factor.
 
 
+def stack(images: list[np.ndarray], axis: int = 0):
+    """Stack a list of images into a single image."""
+    pad_axis = 1 - axis
+
+    # Get the biggest image along the pad_axis
+    max_size = np.max([image.shape[pad_axis] for image in images])
+
+    # Pad on the other axis to make all images the same size
+    images = [
+        np.pad(
+            image,
+            [(0, 0)] * pad_axis
+            + [(0, max_size - image.shape[pad_axis])]
+            + [(0, 0)] * (2 - pad_axis),
+        )
+        for image in images
+    ]
+    log.debug(f"Stacking images with shapes {[image.shape for image in images]} along {axis}")
+
+    # Stack the images
+    return np.concatenate(images, axis=axis)
+
+
 def combine_heatmap(
     image: np.ndarray,
     heatmap: np.ndarray,
@@ -23,7 +46,7 @@ def combine_heatmap(
     """Visualize a heatmap on an image.
 
     Args:
-        image (Union[np.ndarray, torch.Tensor]): 2D float image, [H, W], or [3, H, W]
+        image (Union[np.ndarray, torch.Tensor]): 2D float image, [H, W]
         heatmap (Union[np.ndarray, torch.Tensor]): 2D float heatmap, [H, W], or [C, H, W] array of heatmaps.
         channel (int, optional): Which channel to use for the heatmap. For an RGB image, channel 0 would render the heatmap in red.. Defaults to 0.
         normalize (bool, optional): Whether to normalize the heatmap. This can lead to all-red images if no landmark was detected. Defaults to True.
@@ -31,8 +54,11 @@ def combine_heatmap(
     Returns:
         np.ndarray: A [H,W,3] numpy image.
     """
-    image_arr = ensure_cdim(image, c=3)
+    image_arr = ensure_cdim(as_float32(image), c=3)
     heatmap_arr = ensure_cdim(heatmap, c=1)
+
+    heatmap_arr = heatmap_arr.transpose(2, 0, 1)
+    image_arr = image_arr.transpose(2, 0, 1)
 
     seg = False
     if heatmap_arr.dtype == bool:
@@ -54,7 +80,9 @@ def combine_heatmap(
     for c in range(3):
         image_arr[c] = ((1 - heat_sum) * image_arr[c]) + (heat_sum if c == channel else 0)
 
-    return image_arr.transpose(1, 2, 0)
+    # log.debug(f"Combined heatmap with shape {image_arr.shape} and dtype {image_arr.dtype}")
+
+    return as_uint8(image_arr.transpose(1, 2, 0))
 
 
 def draw_corridor(

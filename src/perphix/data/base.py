@@ -250,6 +250,8 @@ class PerphixBase:
         "teardrop_right": "R teardrop",
     }
 
+    corridor_names = [cat["name"] for cat in _base_categories if cat["supercategory"] == "corridor"]
+
     _annotation_ids = dict((ann["name"], ann["id"]) for ann in _base_categories)
     _annotation_from_id = dict((ann["id"], ann) for ann in _base_categories)
     _annotation_names: dict[str, int] = dict(

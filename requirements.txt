@@ -12,7 +12,3 @@ pytest
 reorder-python-imports
 toml
 
-# Docs
-mkdocs
-pymdown-extensions
-mkdocstrings[python]
