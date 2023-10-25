@@ -5,6 +5,9 @@ from pydicom.errors import InvalidDicomError
 import random
 import logging
 from copy import deepcopy
+from rich.progress import track
+from PIL import Image
+import numpy as np
 
 log = logging.getLogger(__name__)
 
@@ -103,10 +106,12 @@ def deidentify(input_dir: Path, output_dir: Path, case_id: Optional[str] = None)
     """Remove patient identifiable information from DICOM files, recursively.
 
     Assumes all the dicom files in the directory correspond to the same patient.
+    Writes all dicom files to output_dir directly. To avoid overlapping filenames,
+    dicoms are renamed with a 6-digit index (starting from 000000).
 
     Args:
         input_dir (Path): Input directory
-        output_dir (Path): Output directory
+        output_dir (Path): Output directory to write the dicom files.
 
     """
 
@@ -121,19 +126,34 @@ def deidentify(input_dir: Path, output_dir: Path, case_id: Optional[str] = None)
     if not output_dir.exists():
         output_dir.mkdir(parents=True)
 
-    output_dicom_dir = output_dir / f"case-{case_id}"
-    if not output_dicom_dir.exists():
-        output_dicom_dir.mkdir(parents=True)
+    paths = list(input_dir.rglob("*"))
+    datasets: list[tuple[str, pydicom.Dataset]] = []
+    for path in track(paths, description="Deidentifying DICOM files"):
+        if not path.is_file():
+            continue
+        try:
+            ds = pydicom.dcmread(str(path))
+        except InvalidDicomError:
+            continue
+        acquisition_time = str(ds.AcquisitionTime)
+        # Skip the dose report
+        if "protocol" in str(ds.SeriesDescription).lower():
+            log.info(f"Skipping exam protocol: {ds.SeriesDescription}")
+            continue
+        if ds.Modality not in ["CT", "MR", "DX", "CR", "XA"]:
+            log.info(f"Skipping image with modality {ds.Modality}")
+            continue
+        ds = deidentify_dataset(ds, case_id)
+        datasets.append((acquisition_time, ds))
 
-    for f in input_dir.iterdir():
-        if f.is_dir():
-            deidentify(f, output_dicom_dir / f.name, case_id)
-        elif f.is_file():
-            try:
-                ds = pydicom.dcmread(f)
-            except InvalidDicomError:
-                continue
-            ds = deidentify_dataset(ds, case_id)
-            ds.save_as(output_dicom_dir / f.name)
-        else:
-            raise ValueError(f"Unexpected file type: {f}")
+    datasets = sorted(datasets, key=lambda x: x[0])
+    log.info(f"Found {len(datasets)} DICOM files")
+    for i, (_, ds) in enumerate(track(datasets, description="Writing DICOM files")):
+        new_series_id = i
+        ds.SeriesInstanceUID = str(new_series_id)
+        ds.save_as(str(output_dir / f"{new_series_id:06d}.dcm"))
+
+        # For debugging
+        # image = np.array(ds.pixel_array).astype(np.float32) / (2**16 - 1)
+        # image = (image * 255).astype(np.uint8)
+        # Image.fromarray(image).save(output_dir / f"{i:06d}.png")

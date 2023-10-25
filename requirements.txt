@@ -3,6 +3,7 @@ rich
 pycocotools
 opencv-python
 albumentations
+pydicom
 
 # development
 pre-commit
