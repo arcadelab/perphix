@@ -126,21 +126,21 @@ class PerphixDataset(PerphixBase):
     """
 
     # try fetching logos
-    try:
-        _jhu_logo_path = data_utils.download(
-            "https://benjamindkilleen.com/files/jhu_logo_black_bg.png",
-            root="/tmp",
-            filename="jhu_logo_black_bg.png",
-        )
-        _arcade_logo_path = data_utils.download(
-            "https://benjamindkilleen.com/files/arcade_logo_black.png",
-            root="/tmp",
-            filename="arcade_logo_black.png",
-        )
-    except Exception as e:
-        log.exception(e)
-        _jhu_logo_path = None
-        _arcade_logo_path = None
+    # try:
+    #     _jhu_logo_path = data_utils.download(
+    #         "https://benjamindkilleen.com/files/jhu_logo_black_bg.png",
+    #         root="/tmp",
+    #         filename="jhu_logo_black_bg.png",
+    #     )
+    #     _arcade_logo_path = data_utils.download(
+    #         "https://benjamindkilleen.com/files/arcade_logo_black.png",
+    #         root="/tmp",
+    #         filename="arcade_logo_black.png",
+    #     )
+    # except Exception as e:
+    #     log.exception(e)
+    _jhu_logo_path = None
+    _arcade_logo_path = None
 
     def __init__(
         self,
