@@ -78,7 +78,7 @@ def gaussian_contrast(
     return A.Lambda(
         image=f_image,
         mask=f_id,
-        keypoint=f_id,
-        bbox=f_id,
+        keypoints=f_id,
+        bboxes=f_id,
         name="gaussian_contrast",
     )
